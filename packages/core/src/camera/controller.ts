@@ -150,8 +150,10 @@ export function createCameraController(
     try {
       const stream = await getUserMediaWithLadder(opts, deviceId)
       const t = stream.getVideoTracks()[0]
+      // 實機驗證（iPad Safari）：gUM 剛 resolve 時 getSettings() 還沒有 width/height，
+      // 要等 track 開始流動。所以正式的 settings 在 attachVideo 之後才讀（見 openInternal）。
       const st = (t?.getSettings() ?? {}) as ExtSettings
-      log(`gUM result: "${t?.label}" deviceId=${st.deviceId?.slice(0, 8)} facingMode=${st.facingMode} ${st.width}x${st.height}`)
+      log(`gUM result: "${t?.label}" deviceId=${st.deviceId?.slice(0, 8)} facingMode=${st.facingMode}`)
       return { stream, external: false }
     } catch (err) {
       log(`gUM failed: ${(err as { code?: string }).code ?? String(err)}`)
@@ -297,6 +299,11 @@ export function createCameraController(
   }
 
   async function open(v: HTMLVideoElement, opts: ResolvedCameraOptions, deviceId?: string): Promise<OpenedCamera> {
+    // 防呆：JS 呼叫端很容易把整個 ScannerOptions 傳進來（實機 debug 時就發生過），
+    // 那會變成 facingMode: undefined → 瀏覽器開預設鏡頭，且不會有任何錯誤。
+    if (typeof opts?.facingMode !== 'string') {
+      throw new TypeError('CameraController.open(): expected resolved camera options (options.camera)')
+    }
     await close()
     closing = false
     video = v

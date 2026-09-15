@@ -62,7 +62,7 @@ async function onFrame() {
 async function start() {
   s.error = null
   try {
-    await ctrl.open(video.value, options)
+    await ctrl.open(video.value, options.camera)
     source = createFrameSource(video.value, onFrame, options.targetFps)
     source.start()
     s.running = true
@@ -85,7 +85,7 @@ async function next() {
   const target = list[(i + 1) % list.length]
   say(`switch → ${target.label}`)
   source?.stop()
-  await ctrl.open(video.value, options, target.deviceId)
+  await ctrl.open(video.value, options.camera, target.deviceId)
   source = createFrameSource(video.value, onFrame, options.targetFps); source.start()
 }
 

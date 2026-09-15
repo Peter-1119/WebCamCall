@@ -60,6 +60,11 @@ describe('camera controller: open', () => {
     expect(ctrl.current).toBeNull()
   })
 
+  it('rejects a whole ScannerOptions object passed by mistake', async () => {
+    const { ctrl, video } = setup()
+    await expect(ctrl.open(video, resolveOptions() as never)).rejects.toBeInstanceOf(TypeError)
+  })
+
   it('reports insecure-context when mediaDevices is missing', async () => {
     const { ctrl, video } = setup()
     Object.defineProperty(navigator, 'mediaDevices', { value: undefined, configurable: true })
