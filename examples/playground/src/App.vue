@@ -22,6 +22,25 @@ const s = reactive({
 
 const say = (m) => log.value.unshift(`${new Date().toLocaleTimeString()} ${m}`)
 
+// 除錯：記錄每次 getUserMedia 的 constraints 與實際拿到的 track（只在 playground 做）
+if (navigator.mediaDevices?.getUserMedia) {
+  const orig = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
+  navigator.mediaDevices.getUserMedia = async (c) => {
+    const v = c.video ?? {}
+    const want = v.deviceId?.exact ? `deviceId=${v.deviceId.exact.slice(0, 8)}…` : `facing=${JSON.stringify(v.facingMode)}`
+    try {
+      const stream = await orig(c)
+      const t = stream.getVideoTracks()[0]
+      const st = t?.getSettings() ?? {}
+      say(`gUM ${want} → "${t?.label}" ${st.deviceId?.slice(0, 8)}… facing=${st.facingMode}`)
+      return stream
+    } catch (e) {
+      say(`gUM ${want} → ✗ ${e.name}`)
+      throw e
+    }
+  }
+}
+
 const ctrl = createCameraController((e) => {
   if (e.type === 'camera') {
     s.camera = e.camera.info; s.caps = e.camera.capabilities; s.settings = e.camera.settings
