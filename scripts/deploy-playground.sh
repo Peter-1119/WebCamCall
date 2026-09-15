@@ -2,21 +2,24 @@
 # 把 playground build 成靜態檔並上傳到 VM，由 nginx 直接 serve。
 #
 # 用法（Git Bash / WSL）：
-#   DEPLOY_TARGET=user@vm-host DEPLOY_PATH=/var/www/scanner ./scripts/deploy-playground.sh
+#   ./scripts/deploy-playground.sh
 #
-# 可選：
-#   PLAYGROUND_BASE=/scanner/   掛在子路徑時設定（結尾要有斜線），預設 /
+# 預設目標是 KSRL-SF-WEB（https://sfserver.flexium.com.tw/scanner/），可用環境變數覆寫：
+#   DEPLOY_TARGET=kw60user@10.1.5.119  DEPLOY_PATH=/var/www/scanner  PLAYGROUND_BASE=/scanner/
+#
+# VM 上一次性準備（讓 kw60user 不用 sudo 就能上傳）：
+#   sudo mkdir -p /var/www/scanner && sudo chown kw60user:kw60user /var/www/scanner
 set -euo pipefail
 
-: "${DEPLOY_TARGET:?請設定 DEPLOY_TARGET=user@host}"
-: "${DEPLOY_PATH:?請設定 DEPLOY_PATH=/var/www/scanner}"
-export PLAYGROUND_BASE="${PLAYGROUND_BASE:-/}"
+: "${DEPLOY_TARGET:=kw60user@10.1.5.119}"
+: "${DEPLOY_PATH:=/var/www/scanner}"
+export PLAYGROUND_BASE="${PLAYGROUND_BASE:-/scanner/}"
 
 cd "$(dirname "$0")/.."
 echo "→ build (base=$PLAYGROUND_BASE)"
 pnpm --filter playground build
 
 echo "→ upload to $DEPLOY_TARGET:$DEPLOY_PATH"
-ssh "$DEPLOY_TARGET" "mkdir -p '$DEPLOY_PATH'"
+ssh "$DEPLOY_TARGET" "mkdir -p '$DEPLOY_PATH' && rm -rf '$DEPLOY_PATH'/assets"
 scp -r examples/playground/dist/* "$DEPLOY_TARGET:$DEPLOY_PATH/"
 echo "✓ done"
