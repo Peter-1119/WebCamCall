@@ -34,6 +34,17 @@ packages/
   ui/      預設 overlay 元件（可選，不裝也能用）
 ```
 
+## 已定案的設計決策
+
+- **語言**：library（packages/*）用 TypeScript；examples/playground 用純 JS。
+- **多尺度解碼**（`options.decodeScale`）：解碼成本與像素數成正比，但小碼/遠距需要
+  足夠像素。三層策略：基準降採樣（640）→ 連續 N 幀無結果時沿階梯升級
+  （960 → 1280 → 全解析度，成功後記住尺度）→ wasm 路徑對「找到位置但解不出」
+  的候選做全解析度局部裁切（zoomToCandidate）。Phase 2 負責裁切/縮放管線，
+  Phase 3 負責回饋訊號。不可退化成固定降採樣。
+- 狀態機轉移表是 `STATE_TRANSITIONS` 常數，`pause()`/`resume()` 非法狀態同步 throw，
+  `start()`/`stop()` 冪等。多碼掃描逐碼發 `decoded`、以 `frameId` 分組。ROI 用比例。
+
 ## 硬性規則
 
 - **不輸出任何使用者可見文案**。core 只回傳 `code`（字串字面量），
