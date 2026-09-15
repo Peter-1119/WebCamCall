@@ -10,6 +10,8 @@ const src = (p) => fileURLToPath(new URL(p, import.meta.url))
 const useHttps = !process.env.PLAYGROUND_HTTP
 
 export default defineConfig({
+  // 部署到 nginx 子路徑時設 PLAYGROUND_BASE=/scanner/（結尾要有斜線）
+  base: process.env.PLAYGROUND_BASE || '/',
   plugins: [vue(), ...(useHttps ? [basicSsl()] : [])],
   server: {
     host: true, // 讓手機透過區網 IP 連進來
