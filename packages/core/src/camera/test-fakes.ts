@@ -17,12 +17,15 @@ export function fakeTrack(init: FakeTrackInit = {}) {
     height: 720,
     frameRate: 30,
   }
+  const state = { readyState: 'live' as 'live' | 'ended' }
   const track = {
     kind: 'video',
     label: init.label ?? 'Back Camera',
-    readyState: 'live' as 'live' | 'ended',
+    get readyState() {
+      return state.readyState
+    },
     stop: vi.fn(() => {
-      track.readyState = 'ended'
+      state.readyState = 'ended'
     }),
     getSettings: () => ({ ...settings }),
     applyConstraints: vi.fn(async (c: MediaTrackConstraints) => {
@@ -32,7 +35,7 @@ export function fakeTrack(init: FakeTrackInit = {}) {
     removeEventListener: target.removeEventListener.bind(target),
     /** 模擬相機被系統收走 */
     end() {
-      track.readyState = 'ended'
+      state.readyState = 'ended'
       target.dispatchEvent(new Event('ended'))
     },
   } as unknown as MediaStreamTrack & { end(): void; stop: ReturnType<typeof vi.fn> }
@@ -51,7 +54,27 @@ export function fakeStream(track = fakeTrack()) {
   } as unknown as MediaStream & { getVideoTracks(): (typeof track)[] }
 }
 
-export function fakeVideoElement() {
+export interface FakeVideo {
+  playsInline: boolean
+  muted: boolean
+  autoplay: boolean
+  srcObject: MediaStream | null
+  videoWidth: number
+  videoHeight: number
+  clientWidth: number
+  clientHeight: number
+  currentTime: number
+  readyState: number
+  setAttribute: ReturnType<typeof vi.fn>
+  removeAttribute: ReturnType<typeof vi.fn>
+  play: ReturnType<typeof vi.fn<() => Promise<void>>>
+  pause: ReturnType<typeof vi.fn>
+  load: ReturnType<typeof vi.fn>
+  requestVideoFrameCallback: ReturnType<typeof vi.fn>
+  cancelVideoFrameCallback: ReturnType<typeof vi.fn>
+}
+
+export function fakeVideoElement(): HTMLVideoElement & FakeVideo {
   const listeners = new Map<string, Set<() => void>>()
   const v = {
     playsInline: false,
@@ -77,7 +100,7 @@ export function fakeVideoElement() {
     addEventListener: (t: string, l: () => void) => listeners.get(t)?.add(l) ?? listeners.set(t, new Set([l])),
     removeEventListener: (t: string, l: () => void) => listeners.get(t)?.delete(l),
   }
-  return v as unknown as HTMLVideoElement & typeof v
+  return v as unknown as HTMLVideoElement & FakeVideo
 }
 
 /** 安裝假的 navigator.mediaDevices，回傳可操控的 mock。 */
