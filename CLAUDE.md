@@ -36,6 +36,12 @@ packages/
 
 ## 已定案的設計決策
 
+- **主要目標裝置：iPad Safari**（2026-09-15 確認廠內只用 iPad）。Android 支援保留在架構中但
+  不做實機驗證。實測 iPad：無 BarcodeDetector → **wasm 是唯一實際會跑的解碼路徑**；
+  有 rVFC、OffscreenCanvas；後鏡頭 label「後置相機」、zoom 1–10、無 torch；
+  `getSettings()` 在 gUM 剛 resolve 時沒有 width/height。
+- 部署：`./scripts/deploy-playground.sh` → https://sfserver.flexium.com.tw/scanner/（nginx 靜態，
+  SELinux 要 restorecon，IT 反代終結 TLS）。廠內可能無外網，**wasm 必須可自架**（wasmUrl）。
 - **語言**：library（packages/*）用 TypeScript；examples/playground 用純 JS。
 - **多尺度解碼**（`options.decodeScale`）：解碼成本與像素數成正比，但小碼/遠距需要
   足夠像素。三層策略：基準降採樣（640）→ 連續 N 幀無結果時沿階梯升級
