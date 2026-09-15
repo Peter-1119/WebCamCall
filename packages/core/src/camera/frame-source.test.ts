@@ -55,6 +55,26 @@ describe('frame source (rAF fallback)', () => {
     expect(loop.pending).toBe(0)
   })
 
+  it('delivers exactly targetFps from a 30fps source with jitter', () => {
+    const loop = fakeLoop()
+    const video = fakeVideo()
+    const onFrame = vi.fn()
+    const src = createFrameSource(video, onFrame, 15, loop.deps)
+    src.start()
+    // 10 秒、300 幀，間隔 33.3ms ± 2ms 抖動
+    let t = 0
+    for (let i = 0; i < 300; i++) {
+      const gap = 1000 / 30 + ((i % 3) - 1) * 2
+      t += gap
+      video.currentTime = t / 1000
+      loop.advance(gap)
+      loop.flush()
+    }
+    expect(onFrame.mock.calls.length).toBeGreaterThanOrEqual(148)
+    expect(onFrame.mock.calls.length).toBeLessThanOrEqual(152)
+    src.stop()
+  })
+
   it('skips duplicate frames (same currentTime) under rAF', () => {
     const loop = fakeLoop()
     const video = fakeVideo()

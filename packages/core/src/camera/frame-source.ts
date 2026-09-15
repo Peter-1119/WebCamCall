@@ -75,12 +75,14 @@ export function createFrameSource(
       stats.dropped++
       return
     }
-    if (now - lastDelivered < minInterval) {
+    // 容許提前 20%：30fps 的幀（33.3ms）對上 15fps 目標（66.67ms），第二幀會落在 66.6ms，
+    // 嚴格比較會把它丟掉變成每三幀取一幀（實測 12fps）。
+    // 排程用累加而非「以現在為基準」，長期平均才會精確等於 targetFps；落後太多就重新對齊。
+    if (now - lastDelivered < minInterval * 0.8) {
       stats.throttled++
       return
     }
-
-    lastDelivered = now
+    lastDelivered = now - lastDelivered > minInterval * 2 ? now : lastDelivered + minInterval
     stats.delivered++
     busy = true
     let result: Promise<void> | void
