@@ -20,7 +20,7 @@ export { resolveOptions, DEFAULT_DECODE_SCALE } from './options'
 
 // 相機管線（進階用法：自行組裝，或 Phase 3 之前的 playground）
 export { createCameraController } from './camera/controller'
-export type { CameraController, CameraControllerEvent, OpenedCamera } from './camera/controller'
+export type { CameraController, CameraControllerEvent, CameraControllerOptions, OpenedCamera } from './camera/controller'
 export { createFrameSource } from './camera/frame-source'
 export type { FrameSource, FrameMeta, FrameSourceStats } from './camera/frame-source'
 export { createFrameGrabber } from './camera/frame-grabber'

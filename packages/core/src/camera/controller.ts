@@ -125,7 +125,16 @@ async function getUserMediaWithLadder(options: ResolvedCameraOptions, deviceId?:
   throw mapGetUserMediaError(lastErr)
 }
 
-export function createCameraController(emit: (event: CameraControllerEvent) => void): CameraController {
+export interface CameraControllerOptions {
+  /** 除錯輸出：每次 getUserMedia 的 constraints、拿到的 track、鏡頭選擇的決策。 */
+  readonly debug?: (message: string) => void
+}
+
+export function createCameraController(
+  emit: (event: CameraControllerEvent) => void,
+  { debug }: CameraControllerOptions = {},
+): CameraController {
+  const log = debug ?? (() => {})
   let current: OpenedCamera | null = null
   let video: HTMLVideoElement | null = null
   let options: ResolvedCameraOptions | null = null
@@ -137,7 +146,17 @@ export function createCameraController(emit: (event: CameraControllerEvent) => v
 
   async function acquire(opts: ResolvedCameraOptions, deviceId?: string): Promise<{ stream: MediaStream; external: boolean }> {
     if (opts.stream && !deviceId) return { stream: opts.stream, external: true }
-    return { stream: await getUserMediaWithLadder(opts, deviceId), external: false }
+    log(`gUM request: ${deviceId ? `deviceId=${deviceId.slice(0, 8)}` : `facingMode=${opts.facingMode}`}`)
+    try {
+      const stream = await getUserMediaWithLadder(opts, deviceId)
+      const t = stream.getVideoTracks()[0]
+      const st = (t?.getSettings() ?? {}) as ExtSettings
+      log(`gUM result: "${t?.label}" deviceId=${st.deviceId?.slice(0, 8)} facingMode=${st.facingMode} ${st.width}x${st.height}`)
+      return { stream, external: false }
+    } catch (err) {
+      log(`gUM failed: ${(err as { code?: string }).code ?? String(err)}`)
+      throw err
+    }
   }
 
   function stopStream(stream: MediaStream, external: boolean) {
@@ -166,10 +185,14 @@ export function createCameraController(emit: (event: CameraControllerEvent) => v
     // 正常裝置零成本。
     let cameras = await listCameras()
     let info = infoFromTrack(track, cameras)
+    log(`cameras: ${cameras.map((c) => `"${c.label}"[${c.facing}]`).join(', ') || '(none)'}`)
+    log(`opened: "${info.label}"[${info.facing}] want=${opts.facingMode}`)
     if (!deviceId && !opts.deviceId && !external) {
+      const byFacing = pickByFacing(cameras, info, opts.facingMode)
       const better =
-        pickByFacing(cameras, info, opts.facingMode) ??
+        byFacing ??
         (opts.preferMainCamera && !isLikelyMainLens(info.label) ? pickMainCamera(cameras, info, opts.facingMode) : null)
+      log(`decision: ${better ? `reopen "${better.label}" (${byFacing ? 'facing mismatch' : 'non-main lens'})` : 'keep'}`)
       if (better) {
         stopStream(stream, external)
         detachVideo(v)
