@@ -11,6 +11,7 @@ import type { ScannerAction, ScannerState } from './state'
  * | `no-camera`                 | false            | `NotFoundError` / `enumerateDevices` 無 videoinput           |
  * | `camera-in-use`             | true             | `NotReadableError`；Android 常見於另一個 App 佔用相機        |
  * | `constraints-unsatisfiable` | true             | `OverconstrainedError`；通常是 deviceId 失效，可換鏡頭重試   |
+ * | `camera-failed`             | true             | 其他未知的 gUM 錯誤，或 stream 開了但等不到第一幀（timeout）   |
  * | `track-ended`               | true             | track `ended` 且自動恢復失敗；iOS 分頁切換、拔除 USB 相機   |
  * | `decoder-init-failed`       | 視情況           | wasm 下載失敗（可重試）或 BarcodeDetector 建構失敗（不可）   |
  * | `decoder-crashed`           | true             | Worker 在執行期死掉（記憶體不足等），`start()` 會重建        |
@@ -29,6 +30,7 @@ export type ErrorCode =
   | 'no-camera'
   | 'camera-in-use'
   | 'constraints-unsatisfiable'
+  | 'camera-failed'
   | 'track-ended'
   | 'decoder-init-failed'
   | 'decoder-crashed'

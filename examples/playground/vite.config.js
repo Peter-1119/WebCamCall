@@ -5,11 +5,15 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 
 const src = (p) => fileURLToPath(new URL(p, import.meta.url))
 
+// PLAYGROUND_HTTP=1 時不開 HTTPS：http://localhost 本身就是 secure context，
+// 給桌機自動化測試用（自簽憑證的攔截頁無法被自動化工具點過）。手機一律用 HTTPS。
+const useHttps = !process.env.PLAYGROUND_HTTP
+
 export default defineConfig({
-  plugins: [vue(), basicSsl()],
+  plugins: [vue(), ...(useHttps ? [basicSsl()] : [])],
   server: {
     host: true, // 讓手機透過區網 IP 連進來
-    port: 5173,
+    port: useHttps ? 5173 : 5174,
   },
   resolve: {
     // 開發期直接指到各 package 的 src，改 core 不用重 build 就能在手機上看到。
