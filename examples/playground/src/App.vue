@@ -15,7 +15,7 @@ const options = resolveOptions({ roi, targetFps: 15 })
 
 const s = reactive({
   camera: null, caps: null, settings: null, roiBox: null, error: null,
-  fps: 0, dropped: 0, throttled: 0, level: '-', grab: '-', grabMs: 0, running: false,
+  fps: 0, dropped: 0, throttled: 0, level: '-', grab: '-', grabMs: 0, running: false, cameras: [],
 })
 
 const say = (m) => log.value.unshift(`${new Date().toLocaleTimeString()} ${m}`)
@@ -23,8 +23,9 @@ const say = (m) => log.value.unshift(`${new Date().toLocaleTimeString()} ${m}`)
 const ctrl = createCameraController((e) => {
   if (e.type === 'camera') {
     s.camera = e.camera.info; s.caps = e.camera.capabilities; s.settings = e.camera.settings
-    say(`camera: ${e.camera.info.label || '(no label)'} ${e.camera.settings.resolution.width}x${e.camera.settings.resolution.height}`)
+    say(`camera: ${e.camera.info.label || '(no label)'} [${e.camera.info.facing}] ${e.camera.settings.resolution.width}x${e.camera.settings.resolution.height}`)
     requestAnimationFrame(updateRoi)
+    ctrl.listCameras().then((list) => { s.cameras = list })
   } else {
     s.error = e.error.code; say(`LOST: ${e.error.code}`)
   }
@@ -110,9 +111,11 @@ settings: {{ s.settings?.resolution.width }}x{{ s.settings?.resolution.height }}
 frames/s: {{ s.fps }} dropped: {{ s.dropped }} throttled: {{ s.throttled }}
 grab: {{ s.grab }} level: {{ s.level }} {{ s.grabMs }}ms
 support: {{ JSON.stringify(support) }}
+cameras:{{ s.cameras.map((c) => `
+  ${c.deviceId.slice(0, 8)}… "${c.label}" [${c.facing}]${c.deviceId === s.camera?.deviceId ? ' ◀ current' : ''}`).join('') }}
     </pre>
-    <canvas ref="debug" class="debug" />
     <ul class="log"><li v-for="(l, i) in log" :key="i">{{ l }}</li></ul>
+    <canvas ref="debug" class="debug" />
   </main>
 </template>
 
