@@ -11,6 +11,11 @@
 #   sudo mkdir -p /var/www/scanner && sudo chown kw60user:kw60user /var/www/scanner
 set -euo pipefail
 
+# Windows Git Bash 會把 "/scanner/" 這種開頭是斜線的環境變數自動轉成
+# "C:/Program Files/Git/scanner/" 再傳給 node，造成 build 出來的資源路徑錯誤。關掉。
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL="*"
+
 : "${DEPLOY_TARGET:=kw60user@10.1.5.119}"
 : "${DEPLOY_PATH:=/var/www/scanner}"
 export PLAYGROUND_BASE="${PLAYGROUND_BASE:-/scanner/}"
