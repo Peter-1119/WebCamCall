@@ -6,6 +6,8 @@ import {
 } from '@scanner/core'
 
 // Phase 2 demo：相機管線，不解碼。用來在實機驗證 iOS / Android 行為。
+// eslint-disable-next-line no-undef
+const build = typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'
 const video = ref(null)
 const debug = ref(null)
 const support = ref(null)
@@ -93,6 +95,7 @@ onBeforeUnmount(() => { stop(); window.removeEventListener('resize', updateRoi) 
 
 <template>
   <main class="app">
+    <div class="build">build {{ build }}</div>
     <div class="viewport">
       <video ref="video" class="video" />
       <div v-if="s.roiBox" class="roi" :style="{ left: s.roiBox.x + 'px', top: s.roiBox.y + 'px', width: s.roiBox.width + 'px', height: s.roiBox.height + 'px' }" />
@@ -121,6 +124,7 @@ cameras:{{ s.cameras.map((c) => `
 
 <style>
 body { margin: 0; font-family: system-ui; background: #111; color: #eee; }
+.build { font-size: 12px; color: #9f9; font-family: monospace; }
 .app { display: flex; flex-direction: column; gap: 8px; padding: 8px; max-width: 480px; margin: 0 auto; }
 .viewport { position: relative; width: 100%; aspect-ratio: 3 / 4; background: #000; overflow: hidden; }
 .video { width: 100%; height: 100%; object-fit: cover; display: block; }

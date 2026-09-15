@@ -1,9 +1,15 @@
+import { execSync } from 'node:child_process'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 
 const src = (p) => fileURLToPath(new URL(p, import.meta.url))
+
+// 版本號：git 短碼 + build 時間，顯示在頁面上，確認手機拿到的是不是最新版
+let gitHash = 'nogit'
+try { gitHash = execSync('git rev-parse --short HEAD').toString().trim() } catch {}
+const buildStamp = `${gitHash} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`
 
 // PLAYGROUND_HTTP=1 時不開 HTTPS：http://localhost 本身就是 secure context，
 // 給桌機自動化測試用（自簽憑證的攔截頁無法被自動化工具點過）。手機一律用 HTTPS。
@@ -12,6 +18,7 @@ const useHttps = !process.env.PLAYGROUND_HTTP
 export default defineConfig({
   // 部署到 nginx 子路徑時設 PLAYGROUND_BASE=/scanner/（結尾要有斜線）
   base: process.env.PLAYGROUND_BASE || '/',
+  define: { __BUILD__: JSON.stringify(buildStamp) },
   plugins: [vue(), ...(useHttps ? [basicSsl()] : [])],
   server: {
     host: true, // 讓手機透過區網 IP 連進來
