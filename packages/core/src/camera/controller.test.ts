@@ -106,6 +106,22 @@ describe('camera controller: open', () => {
     expect(md.getUserMedia).toHaveBeenCalledTimes(1)
   })
 
+  it('reopens with the back camera when Safari hands out the front one (localized labels)', async () => {
+    const { md, ctrl, video } = setup([
+      { deviceId: 'front', label: '前置超廣角相機' },
+      { deviceId: 'back', label: '後置相機' },
+    ])
+    const first = fakeTrack({ deviceId: 'front', label: '前置超廣角相機', facingMode: 'user' })
+    const second = fakeTrack({ deviceId: 'back', label: '後置相機', facingMode: 'environment' })
+    md.getUserMedia.mockResolvedValueOnce(fakeStream(first)).mockResolvedValueOnce(fakeStream(second))
+
+    const opened = await ctrl.open(video, cam)
+
+    expect(md.getUserMedia).toHaveBeenCalledTimes(2)
+    expect((md.getUserMedia.mock.calls[1]![0].video as MediaTrackConstraints).deviceId).toEqual({ exact: 'back' })
+    expect(opened.info).toEqual({ deviceId: 'back', label: '後置相機', facing: 'environment' })
+  })
+
   it('uses an external stream without calling getUserMedia and never stops it', async () => {
     const { md, ctrl, video } = setup()
     const track = fakeTrack()

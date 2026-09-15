@@ -140,8 +140,20 @@ export interface SupportReport {
   readonly secureContext: boolean
   /** `navigator.mediaDevices.getUserMedia` 是否存在。 */
   readonly getUserMedia: boolean
-  /** `BarcodeDetector` 是否存在，以及它宣稱支援的格式（已過濾成 {@link BarcodeFormat}）。 */
-  readonly native: { readonly available: boolean; readonly formats: readonly BarcodeFormat[] }
+  /**
+   * 原生 `BarcodeDetector`。
+   * - `present`：建構子存在。
+   * - `formats`：`getSupportedFormats()` 回報且我們認得的格式。
+   * - `available`：`present && formats.length > 0`。
+   *
+   * 實機驗證：Windows Chrome 有建構子但 formats 為空；iPad Safari 兩者皆無。
+   * 所以判斷可用性一定要看 `available`，不能只看 `'BarcodeDetector' in window`。
+   */
+  readonly native: {
+    readonly present: boolean
+    readonly available: boolean
+    readonly formats: readonly BarcodeFormat[]
+  }
   /** `Worker` 與 `WebAssembly` 是否都存在。 */
   readonly wasm: { readonly available: boolean }
   /** `HTMLVideoElement.prototype.requestVideoFrameCallback` 是否存在。 */

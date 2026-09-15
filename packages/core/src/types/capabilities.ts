@@ -21,7 +21,7 @@ export type FocusMode = 'none' | 'manual' | 'single-shot' | 'continuous'
  *
  * 瀏覽器差異（需實機驗證）：
  * - `torch`：Android Chrome 後鏡頭通常支援；iOS Safari 17 起部分機型支援；桌機幾乎沒有。
- * - `zoom`：Android Chrome 支援；iOS Safari 目前不透過 constraints 支援（要用 CSS 放大或換鏡頭）。
+ * - `zoom`：Android Chrome 支援；iOS Safari 也支援（實機驗證：iPad 前鏡頭回報 1–10）。
  * - `focusModes`：Android Chrome 支援 `continuous`；iOS 不暴露此能力但預設就是連續對焦。
  */
 export interface CameraCapabilities {

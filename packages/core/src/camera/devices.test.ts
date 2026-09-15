@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CameraInfo } from '../types'
-import { inferFacing, isLikelyMainLens, nextCamera, pickMainCamera } from './devices'
+import { inferFacing, isLikelyMainLens, nextCamera, pickByFacing, pickMainCamera } from './devices'
 
 const c = (deviceId: string, label: string): CameraInfo => ({ deviceId, label, facing: inferFacing(label) })
 
@@ -10,6 +10,8 @@ describe('inferFacing', () => {
     ['Back Camera', 'environment'],
     ['Back Ultra Wide Camera', 'environment'],
     ['後置相機', 'environment'],
+    ['前置超廣角相機', 'user'],
+    ['後置雙廣角相機', 'environment'],
     ['camera2 1, facing front', 'user'],
     ['Front Camera', 'user'],
     ['FaceTime HD Camera', 'user'],
@@ -31,6 +33,11 @@ describe('isLikelyMainLens', () => {
     ['Back Macro Camera', false],
     ['Back Depth Camera', false],
     ['IR Camera', false],
+    ['前置超廣角相機', false],
+    ['後置望遠相機', false],
+    ['後置相機', true],
+    ['後置雙廣角相機', true],
+    ['Back Dual Wide Camera', true],
   ])('%s → %s', (label, main) => {
     expect(isLikelyMainLens(label)).toBe(main)
   })
@@ -75,6 +82,24 @@ describe('pickMainCamera', () => {
   it('keeps non-main lenses if they are all there is', () => {
     const onlyUltra = [c('u', 'Back Ultra Wide Camera')]
     expect(pickMainCamera(onlyUltra, null, 'environment')?.deviceId).toBe('u')
+  })
+})
+
+describe('pickByFacing (iPad: ideal environment may yield the front camera)', () => {
+  const ipad = [c('f', '前置超廣角相機'), c('b', '後置相機')]
+
+  it('returns the back camera when the front one was opened but environment was requested', () => {
+    expect(pickByFacing(ipad, ipad[0]!, 'environment')?.deviceId).toBe('b')
+  })
+
+  it('returns null when facing already matches or nothing matches', () => {
+    expect(pickByFacing(ipad, ipad[1]!, 'environment')).toBeNull()
+    expect(pickByFacing([ipad[0]!], ipad[0]!, 'environment')).toBeNull()
+  })
+
+  it('prefers a main lens among the matching-facing cameras', () => {
+    const list = [c('f', 'Front Camera'), c('uw', 'Back Ultra Wide Camera'), c('m', 'Back Camera')]
+    expect(pickByFacing(list, list[0]!, 'environment')?.deviceId).toBe('m')
   })
 })
 

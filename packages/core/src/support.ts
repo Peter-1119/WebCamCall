@@ -43,7 +43,7 @@ export const probeSupport: ProbeSupport = async () => {
   return {
     secureContext: hasWindow ? window.isSecureContext === true : false,
     getUserMedia: typeof nav?.mediaDevices?.getUserMedia === 'function',
-    native: { available: !!Detector && nativeFormats.length > 0, formats: nativeFormats },
+    native: { present: !!Detector, available: !!Detector && nativeFormats.length > 0, formats: nativeFormats },
     wasm: { available: typeof Worker !== 'undefined' && typeof WebAssembly !== 'undefined' },
     requestVideoFrameCallback:
       hasWindow &&

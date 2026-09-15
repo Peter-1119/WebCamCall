@@ -2,7 +2,7 @@ import { createCapabilityError, createScannerError } from '../errors'
 import type { CameraCapabilities, CameraInfo, CameraSettings, FocusMode, ScannerError } from '../types'
 import { buildConstraints, constraintLadder, isOverconstrained, mapGetUserMediaError } from './constraints'
 import type { ResolvedCameraOptions } from './constraints'
-import { inferFacing, isLikelyMainLens, listVideoInputs, pickMainCamera } from './devices'
+import { inferFacing, isLikelyMainLens, listVideoInputs, pickByFacing, pickMainCamera } from './devices'
 import { attachVideo, detachVideo, waitForFrame } from './video'
 
 /** lib.dom 尚未收錄的 constraint / capability 欄位（Image Capture spec）。 */
@@ -160,12 +160,16 @@ export function createCameraController(emit: (event: CameraControllerEvent) => v
       throw err
     }
 
-    // Android 多鏡頭：現在有權限了、label 也有了，才判斷得出開到的是不是主鏡頭。
-    // 只有「開到的是被排除的鏡頭」才重開一次；正常裝置零成本。
+    // 現在有權限了、label 也有了，才判斷得出開到的鏡頭對不對。只在必要時重開一次：
+    // 1. 方向不符（實機驗證：iPad Safari 對 ideal: 'environment' 可能給前鏡頭）
+    // 2. Android 多鏡頭開到超廣角 / 望遠等非主鏡頭（preferMainCamera）
+    // 正常裝置零成本。
     let cameras = await listCameras()
     let info = infoFromTrack(track, cameras)
-    if (opts.preferMainCamera && !deviceId && !opts.deviceId && !external && !isLikelyMainLens(info.label)) {
-      const better = pickMainCamera(cameras, info, opts.facingMode)
+    if (!deviceId && !opts.deviceId && !external) {
+      const better =
+        pickByFacing(cameras, info, opts.facingMode) ??
+        (opts.preferMainCamera && !isLikelyMainLens(info.label) ? pickMainCamera(cameras, info, opts.facingMode) : null)
       if (better) {
         stopStream(stream, external)
         detachVideo(v)

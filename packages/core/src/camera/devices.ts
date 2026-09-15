@@ -6,17 +6,38 @@ import type { CameraInfo } from '../types'
  * 桌機通常是產品名（`FaceTime HD Camera`、`HD Pro Webcam C920`），推不出來就是 `unknown`。
  */
 export function inferFacing(label: string): CameraInfo['facing'] {
-  if (/\b(back|rear|environment)\b|後置|后置|後鏡|后镜/i.test(label)) return 'environment'
-  if (/\b(front|user|face(time)?|selfie)\b|前置|前鏡|前镜/i.test(label)) return 'user'
+  if (/\b(back|rear|environment)\b|後置|后置|後鏡|后镜|背面/i.test(label)) return 'environment'
+  if (/\b(front|user|face(time)?|selfie)\b|前置|前鏡|前镜|正面/i.test(label)) return 'user'
   return 'unknown'
+}
+
+/**
+ * 開到的鏡頭方向與要求不符時，找一顆符合方向的。
+ * 實機驗證：iPad Safari 對 `facingMode: { ideal: 'environment' }` 可能給前鏡頭。
+ * 回傳 `null` 表示方向已符合或沒有可換的。
+ */
+export function pickByFacing(
+  cameras: readonly CameraInfo[],
+  current: CameraInfo,
+  facing: 'environment' | 'user',
+): CameraInfo | null {
+  if (current.facing === facing) return null
+  const same = cameras.filter((c) => c.facing === facing)
+  if (same.length === 0) return null
+  return pickMainCamera(same, null, facing)
 }
 
 /**
  * 「不是主鏡頭」的關鍵字。Samsung 等會給描述性 label
  * （`Back Ultra Wide Camera`、`Back Telephoto Camera`、`Back Macro Camera`）。
  * 單獨的 "wide" 不算：主鏡頭有時就叫 Wide Camera。
+ *
+ * iOS 的 label 會**隨系統語言在地化**（實機驗證：iPad 中文介面給 `前置超廣角相機`），
+ * 所以中文關鍵字也要認：超廣角 / 望遠 / 微距 / 深度。
+ * 「雙廣角」「三相機」是 iOS 的虛擬合成鏡頭（會自動切換微距），對掃碼反而最好，不排除。
  */
-const NON_MAIN_LENS = /ultra[\s-]?wide|wide[\s-]?angle|macro|tele(photo)?|depth|bokeh|infrared|\bir\b|\btof\b|virtual/i
+const NON_MAIN_LENS =
+  /ultra[\s-]?wide|wide[\s-]?angle|macro|tele(photo)?|depth|bokeh|infrared|\bir\b|\btof\b|virtual|超廣角|超广角|望遠|長焦|长焦|微距|深度/i
 
 export function isLikelyMainLens(label: string): boolean {
   return !NON_MAIN_LENS.test(label)
