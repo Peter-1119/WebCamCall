@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "copy-wasm": "node scripts/copy-wasm.mjs",
+    "predev": "node scripts/copy-wasm.mjs",
+    "prebuild": "node scripts/copy-wasm.mjs",
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview --host"
@@ -14,6 +17,7 @@
     "vue": "^3.5.42"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.9"
+    "@vitejs/plugin-vue": "^6.0.9",
+    "zxing-wasm": "3.1.4"
   }
 }

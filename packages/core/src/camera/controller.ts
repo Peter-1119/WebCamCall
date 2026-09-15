@@ -3,7 +3,7 @@ import type { CameraCapabilities, CameraInfo, CameraSettings, FocusMode, Scanner
 import { buildConstraints, constraintLadder, isOverconstrained, mapGetUserMediaError } from './constraints'
 import type { ResolvedCameraOptions } from './constraints'
 import { inferFacing, isLikelyMainLens, listVideoInputs, pickByFacing, pickMainCamera } from './devices'
-import { attachVideo, detachVideo, waitForFrame } from './video'
+import { attachVideo, detachVideo, waitForFrameAdvance } from './video'
 
 /** lib.dom 尚未收錄的 constraint / capability 欄位（Image Capture spec）。 */
 interface ExtCapabilities extends MediaTrackCapabilities {
@@ -251,7 +251,7 @@ export function createCameraController(
     if (current.track.readyState === 'ended') return recover()
     void video.play().catch(() => {})
     try {
-      await waitForFrame(video, 1000)
+      await waitForFrameAdvance(video, 1500)
     } catch {
       return recover()
     }

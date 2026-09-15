@@ -6,6 +6,10 @@
  */
 export * from './types'
 
+// 主要 API
+export { createScanner } from './scanner'
+export { createDecoder } from './decoder'
+
 // 座標 helper
 export { getElementTransform, toElementSpace, rectToElementSpace, roiToImageRect } from './geometry'
 

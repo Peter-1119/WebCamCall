@@ -39,47 +39,59 @@ export async function attachVideo(
   // 不 await：iOS 上 play() 的 promise 有時在有幀之後才 resolve；拒絕也不代表失敗。
   void video.play().catch(() => {})
 
-  await waitForFrame(video, timeoutMs)
+  await waitForVideoReady(video, timeoutMs)
 }
 
 /**
- * 等待下一個真實幀。`attachVideo` 與「切回分頁後是否凍結」的偵測共用。
- * 失敗以 `camera-failed` reject（cause: 'timeout'）。
+ * 等 video 有可用的幀資料：`readyState >= HAVE_CURRENT_DATA` 且 `videoWidth > 0`。
+ *
+ * 刻意**不用** rVFC / rAF：視窗被遮住或分頁在背景時兩者都不會觸發
+ * （實機驗證：桌機 Chrome 視窗被蓋住時 rVFC 完全停止，導致 6 秒 timeout 誤判）。
+ * `setTimeout` 在背景會被節流到 1 次/秒，但仍然會跑。
  */
-export function waitForFrame(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
+export function waitForVideoReady(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     let done = false
-    let rvfcHandle = 0
-    let rafHandle = 0
-
+    const ready = () => video.videoWidth > 0 && video.readyState >= 2 /* HAVE_CURRENT_DATA */
     const finish = (err?: Error) => {
       if (done) return
       done = true
       clearTimeout(timer)
-      if (rvfcHandle && hasRvfc(video)) video.cancelVideoFrameCallback(rvfcHandle)
-      if (rafHandle) cancelAnimationFrame(rafHandle)
+      clearTimeout(poll)
+      video.removeEventListener('loadeddata', onEvent)
+      video.removeEventListener('playing', onEvent)
       err ? reject(err) : resolve()
     }
-
-    const timer = setTimeout(
-      () => finish(createScannerError('camera-failed', { cause: 'timeout' })),
-      timeoutMs,
-    )
-
-    if (hasRvfc(video)) {
-      rvfcHandle = video.requestVideoFrameCallback(() => finish())
-      return
+    const onEvent = () => {
+      if (ready()) finish()
     }
-
-    // rAF fallback：等 metadata 與 videoWidth
-    const poll = () => {
-      if (video.videoWidth > 0 && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        finish()
-      } else {
-        rafHandle = requestAnimationFrame(poll)
-      }
+    let poll: ReturnType<typeof setTimeout>
+    const tick = () => {
+      if (ready()) return finish()
+      poll = setTimeout(tick, 50)
     }
-    poll()
+    const timer = setTimeout(() => finish(createScannerError('camera-failed', { cause: 'timeout' })), timeoutMs)
+    video.addEventListener('loadeddata', onEvent)
+    video.addEventListener('playing', onEvent)
+    tick()
+  })
+}
+
+/**
+ * 等 `currentTime` 前進，代表 stream 真的有新幀在流（與有沒有被畫出來無關）。
+ * 給「切回前景後是否凍結」的 watchdog 用：iOS 凍結時 readyState 仍是 4、videoWidth 仍 > 0，
+ * 只有 currentTime 會停住。
+ */
+export function waitForFrameAdvance(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const start = video.currentTime
+    const t0 = Date.now()
+    const tick = () => {
+      if (video.currentTime !== start) return resolve()
+      if (Date.now() - t0 > timeoutMs) return reject(createScannerError('camera-failed', { cause: 'frozen' }))
+      setTimeout(tick, 100)
+    }
+    setTimeout(tick, 100)
   })
 }
 

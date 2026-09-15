@@ -85,7 +85,11 @@ export function fakeVideoElement(): HTMLVideoElement & FakeVideo {
     videoHeight: 720,
     clientWidth: 360,
     clientHeight: 640,
-    currentTime: 0,
+    // 模擬 stream 在流：每次讀 currentTime 都前進
+    get currentTime() {
+      return performance.now() / 1000
+    },
+    set currentTime(_v: number) {},
     readyState: 4,
     setAttribute: vi.fn(),
     removeAttribute: vi.fn(),
