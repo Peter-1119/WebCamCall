@@ -1,0 +1,23 @@
+import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import basicSsl from '@vitejs/plugin-basic-ssl'
+
+const src = (p) => fileURLToPath(new URL(p, import.meta.url))
+
+export default defineConfig({
+  plugins: [vue(), basicSsl()],
+  server: {
+    host: true, // 讓手機透過區網 IP 連進來
+    port: 5173,
+  },
+  resolve: {
+    // 開發期直接指到各 package 的 src，改 core 不用重 build 就能在手機上看到。
+    // 注意：這表示 dev 測的不是 dist 產物；驗打包結果請用 `pnpm build && pnpm preview`。
+    alias: {
+      '@scanner/core': src('../../packages/core/src/index.ts'),
+      '@scanner/vue': src('../../packages/vue/src/index.ts'),
+      '@scanner/ui': src('../../packages/ui/src/index.ts'),
+    },
+  },
+})

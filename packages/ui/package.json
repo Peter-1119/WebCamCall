@@ -1,0 +1,35 @@
+{
+  "name": "@scanner/ui",
+  "version": "0.0.0",
+  "description": "Optional default overlay components for @scanner/vue",
+  "type": "module",
+  "sideEffects": ["**/*.css"],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@scanner/core": "workspace:*",
+    "@scanner/vue": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.9",
+    "vite-plugin-dts": "^5.1.0",
+    "vue": "^3.5.42",
+    "vue-tsc": "^3.3.11"
+  }
+}

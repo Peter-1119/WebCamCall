@@ -1,0 +1,11 @@
+packages:
+  - packages/*
+  - examples/*
+
+# pnpm 12 預設不執行依賴的 install script，esbuild 需要 postinstall 放 binary
+allowBuilds:
+  esbuild: true
+
+# pnpm 12 的 supply-chain 保護：剛發布的版本預設會被擋，這裡明確放行
+minimumReleaseAgeExclude:
+  - '@vitejs/plugin-vue@6.0.9'
