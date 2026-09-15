@@ -9,7 +9,7 @@ const src = (p) => fileURLToPath(new URL(p, import.meta.url))
 // 版本號：git 短碼 + build 時間，顯示在頁面上，確認手機拿到的是不是最新版
 let gitHash = 'nogit'
 try { gitHash = execSync('git rev-parse --short HEAD').toString().trim() } catch {}
-const buildStamp = `${gitHash} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`
+const buildStamp = `${gitHash} ${new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Taipei' }).slice(0, 16)}`
 
 // PLAYGROUND_HTTP=1 時不開 HTTPS：http://localhost 本身就是 secure context，
 // 給桌機自動化測試用（自簽憑證的攔截頁無法被自動化工具點過）。手機一律用 HTTPS。
