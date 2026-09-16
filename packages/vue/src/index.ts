@@ -1,7 +1,7 @@
 /**
- * @scanner/vue
- *
- * Phase 4 會在這裡實作 useBarcodeScanner()。
- * 目前只放一個 re-export 驗證 workspace 連結與打包流程。
+ * @scanner/vue — `useBarcodeScanner()` composable。
+ * 同時 re-export core 的所有型別與 helper，App 端只要 import 這一個套件。
  */
-export { VERSION as CORE_VERSION } from '@scanner/core'
+export { useBarcodeScanner } from './useBarcodeScanner'
+export type { UseBarcodeScannerOptions, UseBarcodeScannerReturn } from './useBarcodeScanner'
+export * from '@scanner/core'
