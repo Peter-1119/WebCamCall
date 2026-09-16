@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import CoreDemo from './CoreDemo.vue'
 import VueDemo from './VueDemo.vue'
 import ComponentDemo from './ComponentDemo.vue'
+import BenchDemo from './BenchDemo.vue'
 
 const tab = ref(localStorage.getItem('demo') ?? 'ui')
 const pick = (t) => { tab.value = t; localStorage.setItem('demo', t) }
@@ -13,10 +14,12 @@ const pick = (t) => { tab.value = t; localStorage.setItem('demo', t) }
     <button :class="{ on: tab === 'ui' }" @click="pick('ui')">&lt;BarcodeScanner&gt;</button>
     <button :class="{ on: tab === 'vue' }" @click="pick('vue')">useBarcodeScanner()</button>
     <button :class="{ on: tab === 'core' }" @click="pick('core')">@scanner/core</button>
+    <button :class="{ on: tab === 'bench' }" @click="pick('bench')">bench</button>
   </nav>
   <!-- key 讓切換時整個 demo 重建，相機一定會被 stop -->
   <ComponentDemo v-if="tab === 'ui'" key="ui" />
   <VueDemo v-else-if="tab === 'vue'" key="vue" />
+  <BenchDemo v-else-if="tab === 'bench'" key="bench" />
   <CoreDemo v-else key="core" />
 </template>
 

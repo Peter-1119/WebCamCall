@@ -134,3 +134,46 @@ describe('quadBounds / expandRect', () => {
     expect(r.y + r.height).toBe(35)
   })
 })
+
+describe('full round trip: ROI crop → downsample → decode → image → element → image', () => {
+  it('recovers the original image-space quad within 1px after the whole pipeline', () => {
+    const image = { width: 1920, height: 1080 }
+    const roi = { x: 0.15, y: 0.3, width: 0.7, height: 0.4 }
+    const crop = roiToImageRect(roi, image)
+    const targetWidth = 640
+    const scale = targetWidth / crop.width
+
+    // 一個真實影像座標的 quad（在 ROI 內、旋轉過）
+    const original: Quad<'image'> = [
+      { x: 900, y: 500 },
+      { x: 1100, y: 520 },
+      { x: 1080, y: 720 },
+      { x: 880, y: 700 },
+    ]
+    // 解碼器看到的座標：裁切 + 縮放（core 的 grabber 做的事）
+    const decoded: Quad<'image'> = original.map((p) => ({ x: (p.x - crop.x) * scale, y: (p.y - crop.y) * scale })) as unknown as Quad<'image'>
+
+    // 回到影像座標（wasm/native port 做的事）
+    const back = toImageSpace(decoded, crop, scale)
+    for (let i = 0; i < 4; i++) {
+      expect(back[i]!.x).toBeCloseTo(original[i]!.x, 6)
+      expect(back[i]!.y).toBeCloseTo(original[i]!.y, 6)
+    }
+
+    // 畫到 360×640 直式元素上（cover），再用轉換參數反算回影像座標
+    const v = fakeVideo(image.width, image.height, 360, 640)
+    const t = getElementTransform(v)!
+    const el = toElementSpace(back, t)
+    for (let i = 0; i < 4; i++) {
+      const ix = (el[i]!.x - t.offsetX) / t.scaleX
+      const iy = (el[i]!.y - t.offsetY) / t.scaleY
+      expect(ix).toBeCloseTo(original[i]!.x, 6)
+      expect(iy).toBeCloseTo(original[i]!.y, 6)
+    }
+
+    // ROI 框本身也走同一條路，應與 quad 在同一個座標系裡
+    const roiEl = rectToElementSpace(roi, t)
+    expect(el[0]!.x).toBeGreaterThan(roiEl.x)
+    expect(el[2]!.y).toBeLessThan(roiEl.y + roiEl.height)
+  })
+})

@@ -44,6 +44,8 @@ packages/
   QR 與 Code 128 皆可解，執行中熱切換 formats 正常。decodeScale 預設值不需調整。
 - 部署：`./scripts/deploy-playground.sh` → https://sfserver.flexium.com.tw/scanner/（nginx 靜態，
   SELinux 要 restorecon，IT 反代終結 TLS）。廠內可能無外網，**wasm 必須可自架**（wasmUrl）。
+  細節見 `docs/deploy.md`；實機測試項目見 `docs/device-checklist.md`。
+- 工具限制：Bash heredoc 超過約 170 行會被截斷（改用 Write 工具）；heredoc 內 `` 會變成 backspace 字元。
 - **語言**：library（packages/*）用 TypeScript；examples/playground 用純 JS。
 - **多尺度解碼**（`options.decodeScale`）：解碼成本與像素數成正比，但小碼/遠距需要
   足夠像素。三層策略：基準降採樣（640）→ 連續 N 幀無結果時沿階梯升級
