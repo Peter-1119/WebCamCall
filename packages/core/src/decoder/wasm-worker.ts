@@ -69,7 +69,9 @@ async function handleInit(wasmUrl: string | undefined) {
     })
     scope.postMessage({ type: 'ready' })
   } catch (err) {
-    scope.postMessage({ type: 'init-error', message: err instanceof Error ? err.message : String(err) })
+    // 帶上實際嘗試的位置：沒設 wasmUrl 時是 jsDelivr CDN，廠內無外網就會在這裡失敗
+    const where = file ?? 'default CDN (set options.wasm.wasmUrl to self-host)'
+    scope.postMessage({ type: 'init-error', message: `${err instanceof Error ? err.message : String(err)} [wasm: ${where}]` })
   }
 }
 

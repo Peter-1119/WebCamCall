@@ -34,8 +34,9 @@ export interface CameraOptions {
 /** wasm 後端的載入設定。native 路徑下完全不會用到。 */
 export interface WasmOptions {
   /**
-   * `.wasm` 檔的 URL 或目錄。不設的話用 bundler 解析出的預設位置。
-   * 自架 CDN 或 CSP 限制時需要設。
+   * `.wasm` 檔的 URL 或目錄。**不設的話會從 jsDelivr CDN 下載**（zxing-wasm 的預設行為）。
+   * 內網 / 無外網 / CSP 限制的環境**必須**自架並設定此值，否則 `start()` 會以
+   * `decoder-init-failed` 失敗。檔案來源：`node_modules/zxing-wasm/dist/reader/zxing_reader.wasm`。
    */
   readonly wasmUrl?: string
   /** 自訂 Worker 的建立方式，給 bundler 處理不了 `new Worker(new URL(...))` 的情境。 */
