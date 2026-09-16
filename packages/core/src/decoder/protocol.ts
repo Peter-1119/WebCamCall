@@ -1,3 +1,5 @@
+import type { DottedVariant } from './morphology'
+
 /**
  * 主執行緒 ↔ wasm Worker 的訊息協定。
  * 座標在這一層是「解碼影像座標」（裁切+縮放後），換算回原始影像座標是主執行緒的事
@@ -37,13 +39,22 @@ export type WorkerRequest =
       readonly formats: readonly string[]
       readonly maxSymbols: number
       readonly tryHarder: boolean
+      /** 沒解出時用這個變體膨脹後再試一次。 */
+      readonly dotted?: DottedVariant
     }
   | { readonly type: 'dispose' }
 
 export type WorkerResponse =
   | { readonly type: 'ready' }
   | { readonly type: 'init-error'; readonly message: string }
-  | { readonly type: 'result'; readonly id: number; readonly results: readonly RawResult[]; readonly decodeMs: number }
+  | {
+      readonly type: 'result'
+      readonly id: number
+      readonly results: readonly RawResult[]
+      readonly decodeMs: number
+      /** 結果來自膨脹後的第二次嘗試。 */
+      readonly dottedHit: boolean
+    }
   | { readonly type: 'decode-error'; readonly id: number; readonly message: string }
 
 /** `wasmUrl` 可以是 `.wasm` 檔或目錄。 */

@@ -55,6 +55,8 @@ packages/
   （960 → 1280 → 全解析度，成功後記住尺度）→ wasm 路徑對「找到位置但解不出」
   的候選做全解析度局部裁切（zoomToCandidate）。Phase 2 負責裁切/縮放管線，
   Phase 3 負責回饋訊號。不可退化成固定降採樣。
+- **點陣式 DM**：PCB 鑽孔碼 zxing 原生解不出；`dotted` 前處理 = 百分位對比拉伸 + van Herk min/max 膨脹，
+  核 ≈ 1.3–1.5× 模組，每幀輪替 [5,9,13,17]×{dark,light}，成功後 sticky。以真實 PCB 照片驗證。
 - 狀態機轉移表是 `STATE_TRANSITIONS` 常數，`pause()`/`resume()` 非法狀態同步 throw，
   `start()`/`stop()` 冪等。多碼掃描逐碼發 `decoded`、以 `frameId` 分組。ROI 用比例。
 

@@ -7,6 +7,7 @@ import type { FrameMeta, FrameSource } from './camera/frame-source'
 import { createScaleController } from './camera/scale-controller'
 import type { ScaleController } from './camera/scale-controller'
 import { createDebouncer } from './decoder/debounce'
+import { createDottedCycler } from './decoder/morphology'
 import type { DecoderPort } from './decoder/port'
 import { createDecoderPort, selectBackend } from './decoder/select'
 import { createEmitter } from './emitter'
@@ -45,6 +46,8 @@ export const createScanner: CreateScanner = (video, options = {}) => {
   const grabber = createFrameGrabber()
   const debouncer = createDebouncer({ debounceFrames: opts.debounceFrames, rescanDelayMs: opts.rescanDelayMs })
   let scale: ScaleController = createScaleController(opts.decodeScale, opts.roi)
+  const dottedCycler = createDottedCycler()
+  const dottedEnabled = () => (opts.dotted === 'auto' ? opts.formats.includes('data_matrix') : opts.dotted)
 
   let camera: OpenedCamera | null = null
   let backend: DecoderBackend | null = null
@@ -97,6 +100,7 @@ export const createScanner: CreateScanner = (video, options = {}) => {
     }
     debouncer.reset()
     scale.reset()
+    dottedCycler.reset()
   }
 
   async function fail(error: ScannerError) {
@@ -118,10 +122,13 @@ export const createScanner: CreateScanner = (video, options = {}) => {
 
     let out: Awaited<ReturnType<DecoderPort['decode']>>
     let frameId: number
+    let dotted: ReturnType<typeof dottedCycler.next> | null = null
     try {
       const frame = await grabber.grab(video, plan.crop, plan.targetWidth, meta.timestamp)
       frameId = frame.frameId
-      out = await p.decode(frame, { formats: opts.formats, multi: opts.multi, tryHarder: plan.level !== 'base' })
+      // 點陣式加強：每幀輪一個膨脹變體，核大小依解碼影像寬度縮放
+      dotted = dottedEnabled() && p.backend === 'wasm' ? dottedCycler.next(frame.bitmap.width) : null
+      out = await p.decode(frame, { formats: opts.formats, multi: opts.multi, tryHarder: plan.level !== 'base', dotted })
       if (myGen !== generation) return
     } catch (err) {
       if (myGen !== generation) return
@@ -130,6 +137,10 @@ export const createScanner: CreateScanner = (video, options = {}) => {
     }
 
     decodeTimes.push(out.decodeMs)
+    if (dotted) {
+      if (out.dottedHit) dottedCycler.report(dotted, true)
+      else if (out.results.length === 0) dottedCycler.report(dotted, false)
+    }
 
     // 單一模式：畫面裡有多個碼時只取離掃描框中心最近的一個，行為可預期，
     // 使用者會學到「把要掃的碼對進框中間」。多碼模式才全部回報。
@@ -368,6 +379,7 @@ export const createScanner: CreateScanner = (video, options = {}) => {
         ...(patch.rescanDelayMs !== undefined ? { rescanDelayMs: patch.rescanDelayMs } : {}),
         ...(patch.multi !== undefined ? { multi: patch.multi } : {}),
         ...(patch.decodeScale !== undefined ? { decodeScale: { ...opts.decodeScale, ...patch.decodeScale } } : {}),
+        ...(patch.dotted !== undefined ? { dotted: patch.dotted } : {}),
       }
       const roiChanged = next.roi !== opts.roi
       const scaleChanged = next.decodeScale !== opts.decodeScale

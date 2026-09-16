@@ -9,7 +9,7 @@
 pnpm add @cclemon/scanner-ui @cclemon/scanner-vue @cclemon/scanner-core
 ```
 
-> 需要 `@cclemon/scanner-core` **≥ 0.1.2**（wasm 檔內附）。`pnpm view @cclemon/scanner-core version` 確認。
+> 需要 `@cclemon/scanner-core` **≥ 0.1.3**（wasm 檔內附；點陣式 Data Matrix 支援）。`pnpm view @cclemon/scanner-core version` 確認。
 >
 > **還在 0.1.1 的過渡做法**：`pnpm add zxing-wasm@3.1.4`，然後
 > `import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url'`（同一個檔案，之後換成下面那行即可）。
@@ -62,6 +62,17 @@ import { QR_FORMATS, LINEAR_FORMATS } from '@cclemon/scanner-vue'
 ```
 
 `formats` 是響應式的：綁一個 `ref` 改值就即時切換，不重啟相機。
+
+## 3.5 Data Matrix（含 PCB 點陣式）
+
+```js
+:formats="['data_matrix']"            // 或 [...QR_FORMATS, 'data_matrix']
+```
+
+PCB 鑽孔 / 雷刻的 **點陣式** Data Matrix（每個模組是圓點）zxing 原生解不出，
+core ≥ 0.1.3 在 `formats` 含 `data_matrix` 時會自動開啟前處理（`dotted: 'auto'`），
+每幀多花約 6–10 ms。實測 PCB 金面鑽孔碼：關閉 0/3 解出，開啟 3/3。
+要對準：把碼放在框中央、鏡頭距離讓碼佔框寬 1/4 以上，等約半秒（會輪替幾種前處理參數）。
 
 ## 4. 自己排版：composable
 
@@ -121,6 +132,7 @@ const { state, lastResult, error, start, stop, toggleTorch, capabilities } = use
 | 按了開始沒反應、state 停在 `requesting-permission` | 瀏覽器正在問權限，或 iPad 上不是由手勢觸發 |
 | `decoder-init-failed` | 沒傳 `wasm-url`，core 去 CDN 抓 wasm 但內網沒外網 |
 | 掃得到 QR 掃不到條碼 | `formats` 沒包含一維格式 |
+| Data Matrix 有黃框但解不出 | 點陣式碼：需 core ≥ 0.1.3（自動前處理），且 `formats` 要含 `data_matrix` |
 | 兩個碼只回報一個 | 設計如此（單一模式）；要全部回報加 `:multi="true"` |
 | 前鏡頭畫面左右相反 | `<BarcodeScanner mirror>` |
 

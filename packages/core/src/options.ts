@@ -20,6 +20,7 @@ export function resolveOptions(options: ScannerOptions = {}): ResolvedScannerOpt
     targetFps: options.targetFps ?? 15,
     multi: options.multi ?? false,
     emitStats: options.emitStats ?? false,
+    dotted: options.dotted ?? 'auto',
     camera: {
       facingMode: camera.facingMode ?? 'environment',
       idealWidth: camera.idealWidth ?? 1920,

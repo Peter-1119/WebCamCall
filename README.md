@@ -77,6 +77,7 @@ await scanner.start()
 - **單一模式預設**：畫面有多個碼時只回報離掃描框中心最近的一個；`multi: true` 才全部回報
 - **格式越少越快**：`formats: QR_FORMATS` / `LINEAR_FORMATS` / 混合；可用 `updateOptions()` 熱切換
 - **多尺度解碼**：`decodeScale` 三層策略（640 基準 → 階梯升級 → 候選放大），遠近都解得出
+- **點陣式 Data Matrix（PCB DPM）**：`dotted: 'auto'` 對比拉伸 + 形態學膨脹，每幀輪替核大小與極性；實測 PCB 鑽孔碼 0/3 → 3/3
 - **主執行緒不碰像素**：`ImageBitmap` transfer 進 Worker，wasm 解碼在 Worker
 - **座標一律原始影像座標系**：畫框用 `toElementSpace()` / `rectToElementSpace()` 換算，處理 `object-fit: cover`
 - **同一個碼只發一次**：`rescanDelayMs` 是「離開畫面多久後才可再發」，碼留在框內不會重複送單
@@ -87,7 +88,7 @@ await scanner.start()
 ```bash
 pnpm install
 pnpm dev          # tsup --watch（core）+ vite（playground，https://<ip>:5173）
-pnpm test         # vitest：199 tests，含真 zxing-wasm 的整合測試
+pnpm test         # vitest：206 tests，含真 zxing-wasm 的整合測試
 pnpm typecheck
 pnpm build
 pnpm release:pack # → release/*.tgz + zxing_reader.wasm
@@ -111,7 +112,7 @@ pnpm release:pack # → release/*.tgz + zxing_reader.wasm
 | 端到端延遲（幀擷取 → decoded 事件） | p50 23 ms / p95 25 ms，5 分鐘不變 |
 | wasm 解碼（碼在框內、base 640） | p50 2 ms / p95 3 ms；階梯升到全解析度時 12–15 ms |
 | 解碼幀率 | 15 fps，5 分鐘 4489 / 4500 幀命中，主執行緒 rAF 零卡頓 |
-| 格式 | QR、Code 128 實測 OK |
+| 格式 | QR、Code 128 實測 OK；PCB 點陣 Data Matrix 由照片實測 OK（`4260708009502`） |
 | BarcodeDetector | 不存在 → `auto` 走 wasm |
 
 ## 錯誤代碼

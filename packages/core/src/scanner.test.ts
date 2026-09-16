@@ -15,7 +15,7 @@ vi.mock('./decoder/select', () => ({
 vi.mock('./camera/frame-grabber', () => ({
   createFrameGrabber: () => ({
     grab: vi.fn(async (_v: unknown, crop: unknown, _w: number, timestamp: number) => ({
-      bitmap: { close: vi.fn() },
+      bitmap: { close: vi.fn(), width: 640, height: 360 },
       crop,
       scale: 1,
       imageSize: { width: 1280, height: 720 },
@@ -213,6 +213,26 @@ describe('scanner decoding pipeline', () => {
     await multi.scanner.stop()
     const all = multi.events.filter((e) => e.type === 'decoded').map((e) => e.type === 'decoded' && e.result.text)
     expect(new Set(all)).toEqual(new Set(['far', 'near']))
+  })
+
+  it('passes a dotted variant only when data_matrix is requested (auto), cycling kernels/polarity', async () => {
+    const { scanner, waitFor } = setup({ targetFps: 0, formats: ['qr_code', 'data_matrix'] })
+    await scanner.start()
+    await waitFor(() => decodeMock.mock.calls.length >= 4)
+    await scanner.stop()
+    const variants = (decodeMock.mock.calls as unknown as Array<[unknown, { dotted?: { kernel: number; polarity: string } | null }]>)
+      .slice(0, 4)
+      .map((c) => c[1]?.dotted)
+    // fake grabber 的 bitmap 沒有 width → NaN 寬度不會出現；用 mock 的 crop 推得 640 級距 → [5, 9, 13]
+    expect(variants.every((v) => v && typeof v.kernel === 'number' && ['dark', 'light'].includes(v.polarity))).toBe(true)
+    expect(new Set(variants.map((v) => `${v!.polarity}${v!.kernel}`)).size).toBeGreaterThan(1)
+
+    const qrOnly = setup({ targetFps: 0, formats: ['qr_code'] })
+    decodeMock.mockClear()
+    await qrOnly.scanner.start()
+    await qrOnly.waitFor(() => decodeMock.mock.calls.length >= 1)
+    await qrOnly.scanner.stop()
+    expect((decodeMock.mock.calls[0] as unknown as [unknown, { dotted?: unknown }])[1]?.dotted ?? null).toBeNull()
   })
 
   it('located quads become text-less candidates', async () => {

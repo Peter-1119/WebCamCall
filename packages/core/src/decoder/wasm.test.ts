@@ -82,7 +82,7 @@ describe('wasm decoder', () => {
     expect(req.transfer).toEqual([f.bitmap])
 
     const id = req.msg.type === 'decode' ? req.msg.id : -1
-    w.reply({ type: 'result', id, results: [raw()], decodeMs: 12 })
+    w.reply({ type: 'result', id, results: [raw()], decodeMs: 12, dottedHit: false })
     const out = await p
 
     expect(out.decodeMs).toBe(12)
@@ -107,6 +107,7 @@ describe('wasm decoder', () => {
       id,
       results: [raw({ isValid: false, text: '', bytes: null }), raw({ format: 'DXFilmEdge' }), raw({ text: 'ok' })],
       decodeMs: 1,
+      dottedHit: false,
     })
     const out = await p
     expect(out.located).toHaveLength(1)
@@ -118,7 +119,7 @@ describe('wasm decoder', () => {
     const port = await createWasmDecoder({}, { createWorker: () => w, offscreenCanvas: true })
     const p = port.decode(frame(), { formats: ['qr_code'], multi: false, tryHarder: false })
     const id = (w.sent[1]!.msg as { id: number }).id
-    w.reply({ type: 'result', id, results: [raw({ text: 'a' }), raw({ text: 'b' })], decodeMs: 1 })
+    w.reply({ type: 'result', id, results: [raw({ text: 'a' }), raw({ text: 'b' })], decodeMs: 1, dottedHit: false })
     expect((await p).results.map((r) => r.text)).toEqual(['a', 'b'])
   })
 

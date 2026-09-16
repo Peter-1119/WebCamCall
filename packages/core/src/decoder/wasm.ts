@@ -160,7 +160,15 @@ export async function createWasmDecoder(
       }, DECODE_TIMEOUT_MS)
       pending.set(id, { resolve, reject, timer })
       worker.postMessage(
-        { type: 'decode', id, source, formats: toZxingFormats(request.formats), maxSymbols: request.multi ? 255 : 4, tryHarder: request.tryHarder },
+        {
+          type: 'decode',
+          id,
+          source,
+          formats: toZxingFormats(request.formats),
+          maxSymbols: request.multi ? 255 : 4,
+          tryHarder: request.tryHarder,
+          ...(request.dotted ? { dotted: request.dotted } : {}),
+        },
         transfer,
       )
     })
@@ -182,7 +190,7 @@ export async function createWasmDecoder(
       if (!format) continue
       results.push({ text: r.text, format, quad, rawBytes: r.bytes })
     }
-    return { results, located, decodeMs: response.decodeMs }
+    return { results, located, decodeMs: response.decodeMs, dottedHit: response.dottedHit }
   }
 
   let disposed = false

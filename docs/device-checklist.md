@@ -46,6 +46,7 @@ Android Chrome / 桌機 Firefox / Safari 的項目列在最後，目前不列為
 | 8 | 條碼很小 / 很遠 | 先出現黃色候選框（located），拉近後解出 | ⬜ | zoomToCandidate 路徑 |
 | 9 | 低光（遮住部分光源） | 仍可解或出現候選框 | ⬜ | |
 | 10 | 反光（塑膠套下的條碼） | 拿穩後可解 | ⬜ | |
+| 11 | PCB 點陣式 Data Matrix（formats 含 data_matrix） | 對準框中央、碼佔框寬 ≥1/4，半秒內解出 `4260708009502` | ⬜ | 照片離線實測 OK；即時相機待驗 |
 
 ### A4 預設 UI（分頁 `<BarcodeScanner>`）
 

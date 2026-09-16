@@ -10,6 +10,8 @@
  */
 import { prepareZXingModule, purgeZXingModule, readBarcodes } from 'zxing-wasm/reader'
 import type { ReaderOptions, ReadResult } from 'zxing-wasm/reader'
+import { dilateDots, grayToRgba, rgbaToGray } from './morphology'
+import type { MorphScratch } from './morphology'
 import type { DecodeSource, RawResult, WorkerRequest, WorkerResponse } from './protocol'
 import { resolveWasmFile } from './protocol'
 
@@ -23,6 +25,11 @@ const scope = self as unknown as WorkerScope
 
 let canvas: OffscreenCanvas | null = null
 let ctx: OffscreenCanvasRenderingContext2D | null = null
+
+// 點陣膨脹用的重用 buffer（避免每幀配置）
+let grayBuf: Uint8Array | undefined
+let morphScratch: MorphScratch | undefined
+let rgbaBuf: Uint8ClampedArray | undefined
 
 function toImageData(source: DecodeSource): ImageData {
   if (source.kind === 'pixels') {
@@ -128,12 +135,31 @@ async function handleDecode(req: Extract<WorkerRequest, { type: 'decode' }>) {
       maxNumberOfSymbols: req.maxSymbols,
     }
     const t0 = performance.now()
-    const raw = await readBarcodes(image, options)
+    let raw = await readBarcodes(image, options)
+    let dottedHit = false
+
+    // 點陣式（DPM）第二次嘗試：正常解不出時，膨脹圓點成方塊再解一次
+    if (req.dotted && !raw.some((r) => r.isValid)) {
+      const n = image.width * image.height
+      grayBuf = rgbaToGray(image.data, grayBuf && grayBuf.length === n ? grayBuf : undefined)
+      if (!morphScratch || morphScratch.a.length !== n) morphScratch = { a: new Uint8Array(n), b: new Uint8Array(n) }
+      const dilated = dilateDots(grayBuf, image.width, image.height, req.dotted, morphScratch)
+      rgbaBuf = grayToRgba(dilated, rgbaBuf && rgbaBuf.length === n * 4 ? rgbaBuf : undefined)
+      // TS 5.9 的 ImageData 要求 ArrayBuffer-backed 陣列；我們的 buffer 就是，這裡只是型別收窄
+      const second = await readBarcodes(new ImageData(rgbaBuf as Uint8ClampedArray<ArrayBuffer>, image.width, image.height), options)
+      if (second.some((r) => r.isValid)) {
+        raw = second
+        dottedHit = true
+      } else if (raw.length === 0) {
+        raw = second // 至少把「有定位」的候選帶回去
+      }
+    }
+
     const decodeMs = performance.now() - t0
     const results = raw.map(toRaw)
     const transfer: Transferable[] = []
     for (const r of results) if (r.bytes) transfer.push(r.bytes.buffer)
-    scope.postMessage({ type: 'result', id: req.id, results, decodeMs }, transfer)
+    scope.postMessage({ type: 'result', id: req.id, results, decodeMs, dottedHit }, transfer)
   } catch (err) {
     scope.postMessage({ type: 'decode-error', id: req.id, message: err instanceof Error ? err.message : String(err) })
   }

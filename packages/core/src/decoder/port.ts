@@ -1,5 +1,6 @@
 import type { GrabbedFrame } from '../camera/frame-grabber'
 import type { BarcodeFormat, DecoderBackend, Quad } from '../types'
+import type { DottedVariant } from './morphology'
 
 /**
  * 解碼器對「一幀」的輸出。座標**已換算回原始影像座標系**（port 實作負責用 frame.crop / scale 換算）。
@@ -14,6 +15,8 @@ export interface DecodeOutput {
   readonly located: readonly Quad<'image'>[]
   /** 解碼器內部耗時（毫秒，不含傳輸）。 */
   readonly decodeMs: number
+  /** 結果是否來自點陣膨脹的第二次嘗試（給輪替器記住有效的核）。 */
+  readonly dottedHit?: boolean
 }
 
 export interface DecodedSymbol {
@@ -29,6 +32,8 @@ export interface DecodeRequest {
   readonly multi: boolean
   /** 階梯升級後才開 tryHarder，base 級保持快。 */
   readonly tryHarder: boolean
+  /** 本幀要嘗試的點陣膨脹變體；`null` 不做。只有 wasm 後端支援。 */
+  readonly dotted?: DottedVariant | null
 }
 
 /**

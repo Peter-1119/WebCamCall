@@ -1,5 +1,7 @@
 import type { GrabbedFrame } from './camera/frame-grabber'
 import { createDecoderPort, selectBackend } from './decoder/select'
+import { dottedKernels } from './decoder/morphology'
+import type { DottedVariant } from './decoder/morphology'
 import { pickClosest } from './geometry'
 import { resolveOptions } from './options'
 import type { CreateDecoder, DecodedResult } from './types'
@@ -27,7 +29,17 @@ export const createDecoder: CreateDecoder = async (options = {}) => {
         frameId: frameId++,
         timestamp: performance.now(),
       }
-      const out = await port.decode(frame, { formats: opts.formats, multi: opts.multi, tryHarder: true })
+      // 單張圖片沒有每幀預算：正常解不出就把所有點陣膨脹變體都試過
+      const dotted = opts.dotted === 'auto' ? opts.formats.includes('data_matrix') : opts.dotted
+      const variants: Array<DottedVariant | null> = [null]
+      if (dotted && backend === 'wasm') {
+        for (const polarity of ['dark', 'light'] as const) for (const kernel of dottedKernels(bitmap.width)) variants.push({ kernel, polarity })
+      }
+      let out = await port.decode(frame, { formats: opts.formats, multi: opts.multi, tryHarder: true, dotted: variants[1] ?? null })
+      for (let i = 2; i < variants.length && out.results.length === 0; i++) {
+        const again = await createImageBitmap(source)
+        out = await port.decode({ ...frame, bitmap: again }, { formats: opts.formats, multi: opts.multi, tryHarder: true, dotted: variants[i]! })
+      }
       let results = out.results
       if (!opts.multi) {
         const r = pickClosest(results, (x) => x.quad, { x: imageSize.width / 2, y: imageSize.height / 2 })

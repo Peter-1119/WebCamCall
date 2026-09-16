@@ -122,6 +122,13 @@ export interface ScannerOptions {
   readonly multi?: boolean
   /** 是否每秒發 `stats` 事件，預設 `false`。 */
   readonly emitStats?: boolean
+  /**
+   * 點陣式（DPM：PCB 鑽孔、雷射點刻）條碼加強。每個模組是圓點而非實心方格時，
+   * zxing 會「定位得到但解不出」；開啟後每幀多做一次形態學膨脹再解碼（約 +5–10 ms）。
+   *
+   * 預設 `'auto'`：`formats` 含 `data_matrix` 時開啟。實測 PCB 金面鑽孔 DM：關閉 0/3 解出，開啟 3/3。
+   */
+  readonly dotted?: boolean | 'auto'
 }
 
 /**
@@ -140,5 +147,5 @@ export type ResolvedScannerOptions = Required<Omit<ScannerOptions, 'camera' | 'w
 /** `updateOptions()` 允許的欄位。 */
 export type HotUpdatableOptions = Pick<
   ScannerOptions,
-  'formats' | 'roi' | 'targetFps' | 'debounceFrames' | 'rescanDelayMs' | 'multi' | 'decodeScale'
+  'formats' | 'roi' | 'targetFps' | 'debounceFrames' | 'rescanDelayMs' | 'multi' | 'decodeScale' | 'dotted'
 >
