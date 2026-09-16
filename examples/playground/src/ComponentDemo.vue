@@ -6,7 +6,7 @@ import { BarcodeScanner } from '@scanner/ui'
 const scanner = ref(null)
 const results = ref([])
 // 廠內無外網：wasm 一定要自架，否則 core 會去 jsDelivr CDN 抓而失敗（decoder-init-failed）
-const wasm = { wasmUrl: `${import.meta.env.BASE_URL}zxing_reader.wasm` }
+const wasmUrl = `${import.meta.env.BASE_URL}zxing_reader.wasm`
 const hintText = { align: '把條碼對進框內', 'move-closer': '靠近一點', 'hold-steady': '拿穩一點' }
 const errorText = { 'permission-denied': '請允許相機權限', 'no-camera': '找不到相機', 'camera-in-use': '相機被其他 App 佔用' }
 const onDecoded = (r) => results.value.unshift(`${r.format}: ${r.text}`)
@@ -18,7 +18,7 @@ const onDecoded = (r) => results.value.unshift(`${r.format}: ${r.text}`)
       <BarcodeScanner
         ref="scanner"
         :formats="['qr_code', 'code_128', 'ean_13']"
-        :wasm="wasm"
+        :wasm-url="wasmUrl"
         @decoded="onDecoded"
       >
         <!-- 提示與錯誤文案由 App 提供，元件只給 code -->

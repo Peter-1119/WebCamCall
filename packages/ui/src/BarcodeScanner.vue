@@ -20,6 +20,8 @@ const props = withDefaults(
     backend?: BackendPreference
     camera?: CameraOptions
     wasm?: WasmOptions
+    /** `wasm.wasmUrl` 的捷徑：`<BarcodeScanner wasm-url="/scanner/zxing_reader.wasm" />`。內網環境必設。 */
+    wasmUrl?: string
     roi?: Roi | null
     decodeScale?: DecodeScaleOptions
     debounceFrames?: number
@@ -67,7 +69,7 @@ const api = useBarcodeScanner(video, () => ({
   formats: props.formats,
   backend: props.backend,
   ...(props.camera ? { camera: props.camera } : {}),
-  ...(props.wasm ? { wasm: props.wasm } : {}),
+  ...(props.wasm || props.wasmUrl ? { wasm: { ...(props.wasm ?? {}), ...(props.wasmUrl ? { wasmUrl: props.wasmUrl } : {}) } } : {}),
   roi: props.roi,
   ...(props.decodeScale ? { decodeScale: props.decodeScale } : {}),
   debounceFrames: props.debounceFrames,

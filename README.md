@@ -10,10 +10,15 @@ packages/
 examples/
   playground/             四個分頁：<BarcodeScanner> / composable / core / bench
 docs/
+  install.md              其他專案怎麼安裝（.tgz）
   device-checklist.md     實機測試檢查表
   deploy.md               部署與廠內環境的坑
   barcode-scanner-prompts.md  原始的開發提示詞包
 ```
+
+## 安裝到其他專案
+
+沒有 npm registry：用 GitHub Releases 的 `.tgz` 檔，步驟見 **`docs/install.md`**（`pnpm release:pack` 可自己產）。
 
 ## 快速開始
 
@@ -26,7 +31,7 @@ const onDecoded = (r) => console.log(r.text, r.format)
 </script>
 
 <template>
-  <BarcodeScanner :formats="['qr_code']" :wasm="{ wasmUrl: '/scanner/zxing_reader.wasm' }" @decoded="onDecoded">
+  <BarcodeScanner :formats="['qr_code']" wasm-url="/scanner/zxing_reader.wasm" @decoded="onDecoded">
     <template #hint="{ hint }">{{ { align: '對準框內', 'move-closer': '靠近一點', 'hold-steady': '拿穩' }[hint] }}</template>
     <template #error="{ error, retry }"><button @click="retry">{{ error.code }}</button></template>
   </BarcodeScanner>
@@ -79,6 +84,7 @@ pnpm dev          # tsup --watch（core）+ vite（playground，https://<ip>:517
 pnpm test         # vitest：199 tests，含真 zxing-wasm 的整合測試
 pnpm typecheck
 pnpm build
+pnpm release:pack # → release/*.tgz + zxing_reader.wasm
 ```
 
 桌機自動化測試用 `PLAYGROUND_HTTP=1 pnpm --filter playground dev`（http://localhost:5174，免憑證）。

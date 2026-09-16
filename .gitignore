@@ -5,3 +5,4 @@ dist
 *.tsbuildinfo
 pics/
 public/zxing_reader.wasm
+release/

@@ -12,7 +12,8 @@
     "test": "vitest run",
     "dev": "pnpm -r --parallel --filter @scanner/core --filter playground run dev",
     "clean": "pnpm -r exec rm -rf dist",
-    "dev:core": "pnpm --filter @scanner/core dev"
+    "dev:core": "pnpm --filter @scanner/core dev",
+    "release:pack": "bash scripts/release-pack.sh"
   },
   "devDependencies": {
     "@vitejs/plugin-basic-ssl": "^2.3.0",
