@@ -10,6 +10,9 @@ pnpm add @cclemon/scanner-ui @cclemon/scanner-vue @cclemon/scanner-core
 ```
 
 > 需要 `@cclemon/scanner-core` **≥ 0.1.2**（wasm 檔內附）。`pnpm view @cclemon/scanner-core version` 確認。
+>
+> **還在 0.1.1 的過渡做法**：`pnpm add zxing-wasm@3.1.4`，然後
+> `import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url'`（同一個檔案，之後換成下面那行即可）。
 
 ## 2. 最簡用法（5 行）
 
@@ -43,6 +46,7 @@ const errorText = { 'permission-denied': '請允許相機權限', 'no-camera': '
 </template>
 ```
 
+- **`:wasm-url` 在 Vite 專案請一定要傳**（用上面的 `?url` 匯入）。Vite 打包 production 時不會替依賴套件內的 wasm 產生資源，不傳的話會退回外網 CDN，內網部署失敗；console 會有 `[scanner] ... fell back to CDN` 警告。
 - **一定要有一個按鈕呼叫 `start()`**：iOS 要求相機由使用者手勢觸發，不能自動開。
 - 元件本身沒有任何文字，所有文案由 slot 提供（方便 i18n）。
 - 畫面同時有多個碼時，只回報**框中央**的那一個；同一個碼留在框內只會觸發 `@decoded` **一次**（拿開 1.5 秒再放回才會再觸發），所以直接在 `onDecoded` 送 API 不會重複送。

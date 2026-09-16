@@ -34,9 +34,11 @@ export interface CameraOptions {
 /** wasm 後端的載入設定。native 路徑下完全不會用到。 */
 export interface WasmOptions {
   /**
-   * `.wasm` 檔的 URL 或目錄。**不設的話會從 jsDelivr CDN 下載**（zxing-wasm 的預設行為）。
-   * 內網 / 無外網 / CSP 限制的環境**必須**自架並設定此值，否則 `start()` 會以
-   * `decoder-init-failed` 失敗。檔案來源：`node_modules/zxing-wasm/dist/reader/zxing_reader.wasm`。
+   * `.wasm` 檔的 URL 或目錄。**通常不用設**：core 的 dist 內附 `zxing_reader.wasm`，
+   * Worker 會先找與自己同目錄的檔案（Vite / webpack 打包時自動帶上），找不到才退回 jsDelivr CDN。
+   *
+   * 需要設的情況：bundler 沒把 wasm 當資源處理、或想放到 CDN / 特定路徑。
+   * 也可以 `import wasmUrl from '@cclemon/scanner-core/zxing_reader.wasm?url'` 後傳進來。
    */
   readonly wasmUrl?: string
   /** 自訂 Worker 的建立方式，給 bundler 處理不了 `new Worker(new URL(...))` 的情境。 */
