@@ -42,6 +42,7 @@ packages/
   `getSettings()` 在 gUM 剛 resolve 時沒有 width/height。
   **2026-09-16 實測 wasm 解碼：p50 12ms / p95 15ms（1080×1920 後鏡頭，ROI 0.8×0.4，base 640）**，
   QR 與 Code 128 皆可解，執行中熱切換 formats 正常。decodeScale 預設值不需調整。
+  bench：端到端 p50 23 / p95 25 ms，5 分鐘 4489/4500 幀命中、rAF 零卡頓。iPad Safari UA 是 `Macintosh`。
 - 部署：`./scripts/deploy-playground.sh` → https://sfserver.flexium.com.tw/scanner/（nginx 靜態，
   SELinux 要 restorecon，IT 反代終結 TLS）。廠內可能無外網，**wasm 必須可自架**（wasmUrl）。
   細節見 `docs/deploy.md`；實機測試項目見 `docs/device-checklist.md`。

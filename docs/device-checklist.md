@@ -74,8 +74,8 @@ Android Chrome / 桌機 Firefox / Safari 的項目列在最後，目前不列為
 
 | # | 步驟 | 預期 | 結果 | 備註 |
 |---|---|---|---|---|
-| 1 | 30 秒，QR 固定在框內 | 端到端延遲 p95 < 150ms；rAF stalls 接近 0 | ⬜ | |
-| 2 | 5 分鐘 soak | fps 不下降、延遲不變差、無 ERROR | ⬜ | Safari 沒有 memory API，看 fps 趨勢代替 |
+| 1 | 30 秒，QR 固定在框內 | 端到端延遲 p95 < 150ms；rAF stalls 接近 0 | ✅ 2026-09-16 | 452 events，p50 23 / p95 25 ms，decode 2 / 3 ms，stalls 0 |
+| 2 | 5 分鐘 soak | fps 不下降、延遲不變差、無 ERROR | ✅ 2026-09-16 | 4489 events（99.8%），p50 23 / p95 25 ms 與 30 s 相同，dropped 30，stalls 0 |
 | 3 | 5 分鐘後 iPad 溫度 | 溫熱可接受，燙手需回報 | ⬜ | |
 
 ### A7 單張圖片（分頁 `@scanner/core` → 解碼圖片檔）

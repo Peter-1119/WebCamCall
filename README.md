@@ -95,8 +95,9 @@ pnpm build
 | 項目 | 數值 |
 |---|---|
 | 相機 | 後置相機 1080×1920 @30，zoom 1–10，無 torch |
-| wasm 解碼 | p50 12 ms / p95 15 ms |
-| 解碼幀率 | 15 fps（targetFps），dropped 0 |
+| 端到端延遲（幀擷取 → decoded 事件） | p50 23 ms / p95 25 ms，5 分鐘不變 |
+| wasm 解碼（碼在框內、base 640） | p50 2 ms / p95 3 ms；階梯升到全解析度時 12–15 ms |
+| 解碼幀率 | 15 fps，5 分鐘 4489 / 4500 幀命中，主執行緒 rAF 零卡頓 |
 | 格式 | QR、Code 128 實測 OK |
 | BarcodeDetector | 不存在 → `auto` 走 wasm |
 
