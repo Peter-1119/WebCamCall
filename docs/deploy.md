@@ -24,7 +24,20 @@ playground 的 `scripts/copy-wasm.mjs` 會在 build 前自動複製到 `public/`
 
 ### 2. nginx 要有 `application/wasm` MIME
 
-舊版 nginx 的 `mime.types` 沒有 wasm，瀏覽器會拒絕 streaming compile。`deploy/nginx-scanner.conf` 已補。
+舊版 nginx 的 `mime.types` 沒有 wasm。MIME 不對時 Emscripten 會從 `instantiateStreaming` 退回 ArrayBuffer 編譯，
+**能跑但慢一點**，所以是加分項不是必要條件。
+
+**正確做法：改全域檔**，所有 location 一起受益：
+
+```bash
+grep wasm /etc/nginx/mime.types || sudo sed -i 's|^\(\s*\)application/zip\(\s*\)zip;|&
+application/wasmwasm;|' /etc/nginx/mime.types
+grep wasm /etc/nginx/mime.types && sudo nginx -t && sudo systemctl reload nginx
+```
+
+**陷阱**：`types {}` 放在 location 裡是**整份取代**不是追加。單獨寫 `types { application/wasm wasm; }` 會讓該 location 的
+JS/CSS 全部變成 `text/plain`。`deploy/nginx-scanner.conf` 之所以能用，是因為它先 `include /etc/nginx/mime.types;`
+再補 `types { ... }`（同一個 block 內的多個 `types` 會累加）——若照它抄，兩行都要。
 
 ### 3. SELinux（Rocky / RHEL）
 
@@ -55,10 +68,21 @@ MSYS_NO_PATHCONV=1 PLAYGROUND_BASE=/scanner/ pnpm --filter playground build
 `navigator.mediaDevices` 在非安全上下文不存在。`http://localhost` 例外（桌機開發用 `PLAYGROUND_HTTP=1`）。
 手機用自簽憑證時，iOS 要求憑證有 SAN，否則連「仍要前往」都不給。
 
-### 7. 版本確認
+### 7. 版本確認與快取
 
 頁首 `build <git hash> <時間>`。手機看到舊 hash 代表快取，關掉分頁重開或加 `?v=`。
-nginx 已對 `/scanner/` 設 `Cache-Control: no-store`。
+
+playground 的 `/scanner/` 整個 location 設 `no-store`（測試站，方便）。**正式 App 不要這樣做**——
+953 KB 的 wasm 每次都會重載。assets 都帶 hash 可以長快取，只對 `index.html` 關快取：
+
+```nginx
+location = /your-app/index.html {
+    alias /var/www/your-app/index.html;
+    add_header Cache-Control "no-store";
+}
+```
+
+`/your-app/` 會經 `index` 指令內部轉到 `/your-app/index.html`，正好命中。
 
 ## nginx 區塊
 

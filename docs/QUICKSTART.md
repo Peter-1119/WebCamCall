@@ -108,7 +108,9 @@ const { state, lastResult, error, start, stop, toggleTorch, capabilities } = use
 ## 6. 部署注意
 
 - **HTTPS**（相機硬性條件；`http://localhost` 例外）
-- nginx 若是舊版要補 `types { application/wasm wasm; }`
+- nginx 舊版的 `mime.types` 沒有 wasm：**改全域檔** `/etc/nginx/mime.types` 加一行 `application/wasm wasm;`（見 deploy.md）。
+  **不要**在 location 裡單獨寫 `types { application/wasm wasm; }`——那會整份取代 MIME 表，JS/CSS 全變 `text/plain`、整站白頁。
+  MIME 不對時 wasm 仍能載入（退回非串流編譯），只是慢一點。
 - 不能有 `Permissions-Policy: camera=()` header
 - 掛在子路徑（`/rms/`）時 `?url` 匯入會自動處理，不用改
 
