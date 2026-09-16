@@ -77,7 +77,7 @@ describe('wasm decoder', () => {
     const p = port.decode(f, { formats: ['qr_code', 'ean_13'], multi: false, tryHarder: false })
 
     const req = w.sent[1]!
-    expect(req.msg).toMatchObject({ type: 'decode', formats: ['QRCode', 'EAN13'], maxSymbols: 3, tryHarder: false })
+    expect(req.msg).toMatchObject({ type: 'decode', formats: ['QRCode', 'EAN13'], maxSymbols: 4, tryHarder: false })
     expect(req.msg.type === 'decode' && req.msg.source.kind).toBe('bitmap')
     expect(req.transfer).toEqual([f.bitmap])
 
@@ -113,13 +113,13 @@ describe('wasm decoder', () => {
     expect(out.results.map((r) => r.text)).toEqual(['ok'])
   })
 
-  it('multi: false keeps only the first valid result', async () => {
+  it('returns every valid result; single-mode selection happens in the scanner', async () => {
     const w = fakeWorker()
     const port = await createWasmDecoder({}, { createWorker: () => w, offscreenCanvas: true })
     const p = port.decode(frame(), { formats: ['qr_code'], multi: false, tryHarder: false })
     const id = (w.sent[1]!.msg as { id: number }).id
     w.reply({ type: 'result', id, results: [raw({ text: 'a' }), raw({ text: 'b' })], decodeMs: 1 })
-    expect((await p).results.map((r) => r.text)).toEqual(['a'])
+    expect((await p).results.map((r) => r.text)).toEqual(['a', 'b'])
   })
 
   it('decode-error for a frame yields an empty result, not a rejection', async () => {

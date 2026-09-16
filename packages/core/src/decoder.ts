@@ -1,5 +1,6 @@
 import type { GrabbedFrame } from './camera/frame-grabber'
 import { createDecoderPort, selectBackend } from './decoder/select'
+import { pickClosest } from './geometry'
 import { resolveOptions } from './options'
 import type { CreateDecoder, DecodedResult } from './types'
 
@@ -27,7 +28,12 @@ export const createDecoder: CreateDecoder = async (options = {}) => {
         timestamp: performance.now(),
       }
       const out = await port.decode(frame, { formats: opts.formats, multi: opts.multi, tryHarder: true })
-      return out.results.map(
+      let results = out.results
+      if (!opts.multi) {
+        const r = pickClosest(results, (x) => x.quad, { x: imageSize.width / 2, y: imageSize.height / 2 })
+        results = r ? [r] : []
+      }
+      return results.map(
         (s): DecodedResult => ({
           text: s.text,
           format: s.format,

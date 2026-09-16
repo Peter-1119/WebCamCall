@@ -152,6 +152,26 @@ describe('scanner decoding pipeline', () => {
     await scanner.stop()
   })
 
+  it('single mode picks the code closest to the ROI centre; multi reports all', async () => {
+    const far = { text: 'far', format: 'qr_code' as const, quad: rectToQuad({ x: 0, y: 0, width: 40, height: 40 }), rawBytes: null }
+    const near = { text: 'near', format: 'qr_code' as const, quad: rectToQuad({ x: 600, y: 320, width: 80, height: 80 }), rawBytes: null }
+    decodeMock.mockResolvedValue({ results: [far, near], located: [], decodeMs: 1 })
+
+    const single = setup({ debounceFrames: 0, targetFps: 0 })
+    await single.scanner.start()
+    await single.waitFor(() => single.events.some((e) => e.type === 'decoded'))
+    await single.scanner.stop()
+    const texts = single.events.filter((e) => e.type === 'decoded').map((e) => e.type === 'decoded' && e.result.text)
+    expect(new Set(texts)).toEqual(new Set(['near']))
+
+    const multi = setup({ debounceFrames: 0, targetFps: 0, multi: true })
+    await multi.scanner.start()
+    await multi.waitFor(() => multi.events.filter((e) => e.type === 'decoded').length >= 2)
+    await multi.scanner.stop()
+    const all = multi.events.filter((e) => e.type === 'decoded').map((e) => e.type === 'decoded' && e.result.text)
+    expect(new Set(all)).toEqual(new Set(['far', 'near']))
+  })
+
   it('located quads become text-less candidates', async () => {
     const { scanner, events, waitFor } = setup({ targetFps: 0 })
     decodeMock.mockResolvedValue({ results: [], located: [rectToQuad({ x: 0, y: 0, width: 5, height: 5 })], decodeMs: 1 })

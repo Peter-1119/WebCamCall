@@ -5,7 +5,10 @@ import type { BarcodeFormat, DecoderBackend, Quad } from '../types'
  * 解碼器對「一幀」的輸出。座標**已換算回原始影像座標系**（port 實作負責用 frame.crop / scale 換算）。
  */
 export interface DecodeOutput {
-  /** 成功解碼的結果。 */
+  /**
+   * 成功解碼的結果。port 回傳**全部**找到的；單一模式（`multi: false`）下
+   * 由呼叫端挑最靠近掃描框中心的一個（見 scanner.ts / decoder.ts）。
+   */
   readonly results: readonly DecodedSymbol[]
   /** 找到位置但解不出內容（只有 wasm 會有）。 */
   readonly located: readonly Quad<'image'>[]

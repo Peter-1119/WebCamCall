@@ -146,6 +146,29 @@ export function expandRect(r: Rect, ratio: number, bounds: Rect): Rect {
   return { x: Math.floor(x), y: Math.floor(y), width: Math.ceil(right - x), height: Math.ceil(bottom - y) }
 }
 
+/** quad 的中心點（四點平均）。 */
+export function quadCenter(q: Quad<'image'>): Point {
+  return { x: (q[0].x + q[1].x + q[2].x + q[3].x) / 4, y: (q[0].y + q[1].y + q[2].y + q[3].y) / 4 }
+}
+
+/**
+ * 單一模式用：從多個候選中挑「中心離 `target` 最近」的一個。
+ * 掃描框（ROI）中心當 target，使用者把想掃的碼對進框中間就會被選到，行為可預期。
+ */
+export function pickClosest<T>(items: readonly T[], quadOf: (item: T) => Quad<'image'>, target: Point): T | undefined {
+  let best: T | undefined
+  let bestD = Infinity
+  for (const it of items) {
+    const c = quadCenter(quadOf(it))
+    const d = (c.x - target.x) ** 2 + (c.y - target.y) ** 2
+    if (d < bestD) {
+      bestD = d
+      best = it
+    }
+  }
+  return best
+}
+
 export function clamp(v: number, min: number, max: number): number {
   return v < min ? min : v > max ? max : v
 }

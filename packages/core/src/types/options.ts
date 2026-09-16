@@ -108,8 +108,12 @@ export interface ScannerOptions {
   /** 解碼幀率上限，預設 `15`。相機本身的幀率不受影響（預覽仍是 30/60fps）。 */
   readonly targetFps?: number
   /**
-   * 多碼模式，預設 `false`（每幀只處理最靠近 ROI 中心的一個）。
-   * 開了之後每幀可能發多個 `decoded`，用 `frameId` 分組。
+   * 多碼模式，預設 `false`：**畫面裡有多個碼時只回報離掃描框中心最近的一個**，
+   * `decoded` 事件永遠只有一個結果，開發者只要讀 `result.text`，座標可以完全不理。
+   * 使用者自然會學到「把要掃的碼對進框中間」。
+   *
+   * `true`：每幀可能發多個 `decoded`（每個碼一個事件），用 `frameId` 分組；
+   * 這時座標才有意義（要告訴使用者哪個是哪個）。
    */
   readonly multi?: boolean
   /** 是否每秒發 `stats` 事件，預設 `false`。 */

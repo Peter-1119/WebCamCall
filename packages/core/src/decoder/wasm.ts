@@ -160,7 +160,7 @@ export async function createWasmDecoder(
       }, DECODE_TIMEOUT_MS)
       pending.set(id, { resolve, reject, timer })
       worker.postMessage(
-        { type: 'decode', id, source, formats: toZxingFormats(request.formats), maxSymbols: request.multi ? 255 : 3, tryHarder: request.tryHarder },
+        { type: 'decode', id, source, formats: toZxingFormats(request.formats), maxSymbols: request.multi ? 255 : 4, tryHarder: request.tryHarder },
         transfer,
       )
     })
@@ -181,7 +181,6 @@ export async function createWasmDecoder(
       const format = fromZxingFormat(r.format)
       if (!format) continue
       results.push({ text: r.text, format, quad, rawBytes: r.bytes })
-      if (!request.multi && results.length === 1) break
     }
     return { results, located, decodeMs: response.decodeMs }
   }

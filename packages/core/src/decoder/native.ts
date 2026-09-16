@@ -65,7 +65,6 @@ export async function createNativeDecoder(formats: readonly BarcodeFormat[]): Pr
       const format = fromNativeFormat(r.format, known)
       if (!format) continue
       results.push({ text: r.rawValue, format, quad: toImageSpace(cornersToQuad(r), frame.crop, frame.scale), rawBytes: null })
-      if (!request.multi) break
     }
     return { results, located: [], decodeMs: performance.now() - t0 }
   }

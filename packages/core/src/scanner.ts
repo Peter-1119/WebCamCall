@@ -11,6 +11,7 @@ import type { DecoderPort } from './decoder/port'
 import { createDecoderPort, selectBackend } from './decoder/select'
 import { createEmitter } from './emitter'
 import { createScannerError, isScannerError } from './errors'
+import { pickClosest } from './geometry'
 import { resolveOptions } from './options'
 import { createStateMachine } from './state-machine'
 import type {
@@ -110,15 +111,27 @@ export const createScanner: CreateScanner = (video, options = {}) => {
 
     decodeTimes.push(out.decodeMs)
 
-    if (out.results.length > 0) scale.report('decoded', imageSize)
-    else if (out.located.length > 0) scale.report('located', imageSize, out.located[0])
+    // 單一模式：畫面裡有多個碼時只取離掃描框中心最近的一個，行為可預期，
+    // 使用者會學到「把要掃的碼對進框中間」。多碼模式才全部回報。
+    let results = out.results
+    let located = out.located
+    if (!opts.multi) {
+      const center = { x: plan.crop.x + plan.crop.width / 2, y: plan.crop.y + plan.crop.height / 2 }
+      const r = pickClosest(results, (x) => x.quad, center)
+      results = r ? [r] : []
+      const l = pickClosest(located, (q) => q, center)
+      located = l ? [l] : []
+    }
+
+    if (results.length > 0) scale.report('decoded', imageSize)
+    else if (located.length > 0) scale.report('located', imageSize, located[0])
     else scale.report('none', imageSize)
 
-    for (const quad of out.located) {
+    for (const quad of located) {
       emit({ type: 'candidate', candidate: { quad, imageSize, frameId, timestamp: meta.timestamp } })
     }
 
-    const { decoded, pending } = debouncer.process(out.results)
+    const { decoded, pending } = debouncer.process(results)
     for (const { symbol, progress } of pending) {
       emit({
         type: 'candidate',
