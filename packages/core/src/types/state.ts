@@ -51,7 +51,7 @@ export const STATE_TRANSITIONS: Readonly<Record<ScannerState, readonly ScannerSt
  * | 方法             | 合法狀態               | 非法時的行為                         |
  * |------------------|------------------------|--------------------------------------|
  * | `start()`        | idle, stopped, failed  | 其他狀態：no-op，回傳進行中的 promise |
- * | `stop()`         | 任何狀態               | 永遠 no-op（可重入）                  |
+ * | `stop()` / `dispose()` | 任何狀態         | 永遠 no-op（可重入）                  |
  * | `pause()`        | scanning               | 同步 throw {@link InvalidStateError}  |
  * | `resume()`       | paused                 | 同步 throw {@link InvalidStateError}  |
  * | `switchCamera()` | scanning, paused       | reject {@link InvalidStateError}      |

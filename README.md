@@ -68,14 +68,15 @@ await scanner.start()
 - **多尺度解碼**：`decodeScale` 三層策略（640 基準 → 階梯升級 → 候選放大），遠近都解得出
 - **主執行緒不碰像素**：`ImageBitmap` transfer 進 Worker，wasm 解碼在 Worker
 - **座標一律原始影像座標系**：畫框用 `toElementSpace()` / `rectToElementSpace()` 換算，處理 `object-fit: cover`
-- **`stop()` 可重入、`pause()`/`resume()` 嚴格**：見 `STATE_TRANSITIONS`
+- **同一個碼只發一次**：`rescanDelayMs` 是「離開畫面多久後才可再發」，碼留在框內不會重複送單
+- **`stop()` 保留解碼器暖機、`dispose()` 才釋放 Worker**；`stop()`/`dispose()` 可重入、`pause()`/`resume()` 嚴格：見 `STATE_TRANSITIONS`
 
 ## 開發
 
 ```bash
 pnpm install
 pnpm dev          # tsup --watch（core）+ vite（playground，https://<ip>:5173）
-pnpm test         # vitest：195 tests，含真 zxing-wasm 的整合測試
+pnpm test         # vitest：199 tests，含真 zxing-wasm 的整合測試
 pnpm typecheck
 pnpm build
 ```

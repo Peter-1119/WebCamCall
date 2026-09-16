@@ -46,10 +46,18 @@ export interface Scanner {
   start(): Promise<void>
 
   /**
-   * 停止掃描、停掉所有 track（除非 stream 是外部提供的）、終止 Worker、釋放 `<video>` 的 srcObject。
+   * 停止掃描、停掉所有 track（除非 stream 是外部提供的）、釋放 `<video>` 的 srcObject。
+   * **解碼器保留**（Worker 與已編譯的 WASM 留著暖機），下次 `start()` 只需要相機時間；
+   * 要連解碼器一起釋放請用 {@link dispose}。
    * **可重入**：任何狀態下呼叫都不會報錯，重複呼叫是 no-op。
    */
   stop(): Promise<void>
+
+  /**
+   * `stop()` 加上終止 Worker、釋放 WASM。元件卸載 / 離開頁面時呼叫。可重入。
+   * 之後仍可再 `start()`（會重建解碼器）。
+   */
+  dispose(): Promise<void>
 
   /** 暫停解碼迴圈，預覽維持。只允許在 `'scanning'` 呼叫。 */
   pause(): void

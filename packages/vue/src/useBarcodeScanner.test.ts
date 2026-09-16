@@ -26,6 +26,9 @@ const createScannerMock = vi.fn((_video: HTMLVideoElement, options: unknown): Fa
     stop: vi.fn(async () => {
       inst._state = 'stopped'
     }),
+    dispose: vi.fn(async () => {
+      inst._state = 'stopped'
+    }),
     pause: vi.fn(),
     resume: vi.fn(),
     listCameras: vi.fn(async () => []),
@@ -91,7 +94,7 @@ describe('useBarcodeScanner', () => {
 
     v.value = video()
     await nextTick()
-    expect(instances[0]!.stop).toHaveBeenCalled()
+    expect(instances[0]!.dispose).toHaveBeenCalled()
     expect(createScannerMock).toHaveBeenCalledTimes(2)
     scope.stop()
   })
@@ -227,13 +230,13 @@ describe('useBarcodeScanner', () => {
     scope.stop()
   })
 
-  it('stops the scanner when the scope is disposed', async () => {
+  it('disposes the scanner (worker included) when the scope is disposed', async () => {
     const scope = effectScope()
     const v = ref<HTMLVideoElement | null>(video())
     const api = scope.run(() => useBarcodeScanner(v))!
     await nextTick()
     scope.stop()
-    expect(instances[0]!.stop).toHaveBeenCalled()
+    expect(instances[0]!.dispose).toHaveBeenCalled()
     expect(api.scanner.value).toBeNull()
     expect(api.state.value).toBe('idle')
   })

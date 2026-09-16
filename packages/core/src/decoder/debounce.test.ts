@@ -39,15 +39,35 @@ describe('debounce', () => {
     expect(d.process([sym('A')]).pending[0]?.progress.seen).toBe(1)
   })
 
-  it('rescanDelay silences the same value after emission, then allows it again', () => {
+  it('rescanDelay: a value that stays in view is emitted once, no matter how long', () => {
+    const c = clock()
+    const d = createDebouncer({ debounceFrames: 1, rescanDelayMs: 1000 }, c.now)
+    expect(d.process([sym('A')]).decoded).toHaveLength(1)
+    for (let i = 0; i < 100; i++) {
+      c.advance(66)
+      const out = d.process([sym('A')])
+      expect(out.decoded).toHaveLength(0)
+      expect(out.pending).toHaveLength(0)
+    }
+  })
+
+  it('rescanDelay: re-emits only after the value has been out of view for the delay', () => {
     const c = clock()
     const d = createDebouncer({ debounceFrames: 1, rescanDelayMs: 1000 }, c.now)
     expect(d.process([sym('A')]).decoded).toHaveLength(1)
     c.advance(500)
-    const quiet = d.process([sym('A')])
-    expect(quiet.decoded).toHaveLength(0)
-    expect(quiet.pending).toHaveLength(0)
-    c.advance(600)
+    d.process([]) // 拿開
+    c.advance(400)
+    expect(d.process([sym('A')]).decoded).toHaveLength(0) // 才離開 900ms，還不行
+    c.advance(200)
+    d.process([])
+    c.advance(900)
+    expect(d.process([sym('A')]).decoded).toHaveLength(1) // 離開超過 1000ms → 再發
+  })
+
+  it('rescanDelay 0 emits on every confirmed frame', () => {
+    const d = createDebouncer({ debounceFrames: 1, rescanDelayMs: 0 }, clock().now)
+    expect(d.process([sym('A')]).decoded).toHaveLength(1)
     expect(d.process([sym('A')]).decoded).toHaveLength(1)
   })
 

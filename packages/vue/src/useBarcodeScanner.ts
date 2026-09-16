@@ -51,7 +51,7 @@ function stripCallbacks(o: UseBarcodeScannerOptions): ScannerOptions {
  * - scanner 在 `videoRef` 有值時才建立（`v-if` 拿掉再放回會重建），import 時完全不碰 DOM → SSR 安全
  * - 所有 ref 都是 `shallowRef` + `shallowReadonly`：結果物件含 `Uint8Array` 與巢狀座標，深層 reactive 只是浪費
  * - `candidates` 以 rAF 合併：同一幀的多個候選只觸發一次更新，且只在有候選時才動
- * - scope 銷毀時自動 `stop()`；在 setup 之外呼叫（沒有 scope）就要自己 `stop()`
+ * - scope 銷毀時自動 `dispose()`（含 Worker）；在 setup 之外呼叫（沒有 scope）就要自己 `dispose()`
  *
  * @example
  * ```vue
@@ -146,7 +146,7 @@ export function useBarcodeScanner(
     unsubscribe?.()
     unsubscribe = null
     scanner.value = null
-    if (inst) void inst.stop()
+    if (inst) void inst.dispose()
     if (rafId) cancelAnimationFrame(rafId)
     rafId = 0
     if (ttlTimer) clearTimeout(ttlTimer)

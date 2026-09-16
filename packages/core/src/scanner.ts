@@ -58,31 +58,51 @@ export const createScanner: CreateScanner = (video, options = {}) => {
 
   const cameraCtrl = createCameraController((e) => {
     if (e.type === 'camera') {
+      const trackChanged = camera !== null && camera.track !== e.camera.track
       camera = e.camera
       emit({ type: 'camera', camera: e.camera.info, capabilities: e.camera.capabilities, settings: e.camera.settings })
+      // track 換了（自動恢復）而我們正在掃：重建幀來源。
+      // iOS 上 detachVideo() 的 video.load() 會作廢 pending 的 rVFC，舊的迴圈鏈會悄悄斷掉。
+      if (trackChanged && source && sm.is('scanning', 'paused')) {
+        const wasPaused = sm.is('paused')
+        const s = attachSource()
+        if (wasPaused) s.pause()
+      }
     } else {
       // 自動恢復失敗：這是不可恢復的執行期錯誤
       void fail(e.error)
     }
   })
 
-  async function releaseResources() {
+  /** 暖機中的解碼器：stop() 後保留，start() 重用；dispose() / 解碼器出錯才丟掉。 */
+  let warmPort: { backend: DecoderBackend; port: DecoderPort } | null = null
+
+  async function releaseResources(keepDecoder: boolean) {
     stopStats()
     source?.stop()
     source = null
     const p = port
+    const b = backend
     port = null
     backend = null
     await cameraCtrl.close()
     camera = null
-    await p?.dispose()
+    if (p) {
+      if (keepDecoder && b) warmPort = { backend: b, port: p }
+      else await p.dispose()
+    }
+    if (!keepDecoder && warmPort) {
+      await warmPort.port.dispose()
+      warmPort = null
+    }
     debouncer.reset()
     scale.reset()
   }
 
   async function fail(error: ScannerError) {
     generation++
-    await releaseResources()
+    // 解碼器出錯就不留；其他錯誤（相機）保留暖機的解碼器
+    await releaseResources(error.code !== 'decoder-crashed' && error.code !== 'decoder-init-failed')
     if (sm.can('failed')) sm.transition('failed', 'stop')
     emit({ type: 'error', error })
   }
@@ -194,11 +214,15 @@ export const createScanner: CreateScanner = (video, options = {}) => {
     try {
       sm.transition('requesting-permission', 'start')
 
-      // 解碼器初始化（wasm 要下載 ~1 MB）與相機權限並行；相機失敗時解碼器的 rejection 要接住
-      const decoderP = selectBackend(opts.backend, opts.formats).then(async (b) => {
-        const p = await createDecoderPort(b, opts.formats, opts.wasm)
-        return { backend: b, port: p }
-      })
+      // 解碼器初始化（wasm 要下載 ~1 MB）與相機權限並行；相機失敗時解碼器的 rejection 要接住。
+      // 上次 stop() 留下的暖機解碼器直接重用，第二次 start 只剩相機時間。
+      const decoderP = warmPort
+        ? Promise.resolve(warmPort)
+        : selectBackend(opts.backend, opts.formats).then(async (b) => {
+            const p = await createDecoderPort(b, opts.formats, opts.wasm)
+            return { backend: b, port: p }
+          })
+      warmPort = null
       decoderP.catch(() => {})
 
       await cameraCtrl.open(video, opts.camera)
@@ -207,7 +231,7 @@ export const createScanner: CreateScanner = (video, options = {}) => {
 
       const d = await decoderP
       if (aborted()) {
-        await d.port.dispose()
+        warmPort = d // 被 stop() 中斷：留著下次用
         return
       }
       backend = d.backend
@@ -257,7 +281,13 @@ export const createScanner: CreateScanner = (video, options = {}) => {
     async stop() {
       if (sm.is('idle', 'stopped')) return
       generation++
-      await releaseResources()
+      await releaseResources(true)
+      if (sm.can('stopped')) sm.transition('stopped', 'stop')
+    },
+
+    async dispose() {
+      generation++
+      await releaseResources(false)
       if (sm.can('stopped')) sm.transition('stopped', 'stop')
     },
 

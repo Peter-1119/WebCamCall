@@ -102,8 +102,9 @@ export interface ScannerOptions {
    */
   readonly debounceFrames?: number
   /**
-   * 同一個值發出 `decoded` 後，多久內不再重複發，預設 `1500` 毫秒。設 `0` 關閉。
-   * 沒有這個的話，對著同一張 QR 會以 targetFps 的頻率狂發事件。
+   * 同一個值發出 `decoded` 後，要**離開畫面**多久才可再發，預設 `1500` 毫秒。
+   * 碼一直留在框內只會發**一次**（不會每 1.5 秒重發）——「掃到 → 送出 → 拿開」的流程不會重複送單；
+   * 拿開超過 1.5 秒再放回來才會再發。設 `0` 關閉（每個確認幀都發，App 自己去重）。
    */
   readonly rescanDelayMs?: number
   /** 解碼幀率上限，預設 `15`。相機本身的幀率不受影響（預覽仍是 30/60fps）。 */

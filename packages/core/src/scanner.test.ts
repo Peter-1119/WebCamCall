@@ -7,9 +7,10 @@ import type { ScanEvent } from './types'
 // 解碼器與 grabber 換成可控的假貨；相機層用 Phase 2 的 fake mediaDevices
 const decodeMock = vi.fn<() => Promise<DecodeOutput>>()
 const disposeMock = vi.fn(async () => {})
+const createPortMock = vi.fn(async (): Promise<DecoderPort> => ({ backend: 'wasm', decode: decodeMock, dispose: disposeMock }))
 vi.mock('./decoder/select', () => ({
   selectBackend: vi.fn(async () => 'wasm'),
-  createDecoderPort: vi.fn(async (): Promise<DecoderPort> => ({ backend: 'wasm', decode: decodeMock, dispose: disposeMock })),
+  createDecoderPort: (...args: unknown[]) => createPortMock(...(args as [])),
 }))
 vi.mock('./camera/frame-grabber', () => ({
   createFrameGrabber: () => ({
@@ -58,6 +59,7 @@ beforeEach(() => {
   decodeMock.mockReset()
   decodeMock.mockResolvedValue(empty)
   disposeMock.mockClear()
+  createPortMock.mockClear()
 })
 
 describe('scanner lifecycle', () => {
@@ -121,6 +123,47 @@ describe('scanner lifecycle', () => {
     scanner.resume()
     expect(scanner.state).toBe('scanning')
     await scanner.stop()
+  })
+
+  it('stop keeps the decoder warm; dispose releases it; start after dispose rebuilds', async () => {
+    const { scanner } = setup()
+    await scanner.start()
+    expect(createPortMock).toHaveBeenCalledTimes(1)
+    await scanner.stop()
+    expect(disposeMock).not.toHaveBeenCalled()
+    await scanner.start()
+    expect(createPortMock).toHaveBeenCalledTimes(1) // 重用
+    await scanner.dispose()
+    expect(disposeMock).toHaveBeenCalledTimes(1)
+    expect(scanner.state).toBe('stopped')
+    await scanner.dispose() // 可重入
+    await scanner.start()
+    expect(createPortMock).toHaveBeenCalledTimes(2) // 重建
+    await scanner.dispose()
+  })
+
+  it('camera track replacement (auto-recovery) re-attaches the frame loop and keeps pause state', async () => {
+    const { scanner, md, video, events, waitFor } = setup({ targetFps: 0 })
+    decodeMock.mockResolvedValue(hit('A'))
+    await scanner.start()
+    await waitFor(() => events.some((e) => e.type === 'decoded'))
+    scanner.pause()
+
+    // 模擬相機被系統收走 → controller 自動重開
+    const oldTrack = video.srcObject!.getVideoTracks()[0] as unknown as { end(): void }
+    md.getUserMedia.mockResolvedValueOnce(fakeStream(fakeTrack({ deviceId: 'dev-main' })))
+    oldTrack.end()
+    await waitFor(() => events.filter((e) => e.type === 'camera').length >= 2)
+    expect(scanner.state).toBe('paused')
+
+    // 暫停中不解碼；resume 後新的幀迴圈要繼續送幀給解碼器
+    await new Promise((r) => setTimeout(r, 50))
+    const before = decodeMock.mock.calls.length
+    await new Promise((r) => setTimeout(r, 50))
+    expect(decodeMock.mock.calls.length).toBe(before)
+    scanner.resume()
+    await waitFor(() => decodeMock.mock.calls.length > before)
+    await scanner.dispose()
   })
 
   it('switchCamera("next") goes through starting and back, keeping paused state', async () => {
