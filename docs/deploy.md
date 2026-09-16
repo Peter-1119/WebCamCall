@@ -30,8 +30,8 @@ playground 的 `scripts/copy-wasm.mjs` 會在 build 前自動複製到 `public/`
 **正確做法：改全域檔**，所有 location 一起受益：
 
 ```bash
-grep wasm /etc/nginx/mime.types || sudo sed -i 's|^\(\s*\)application/zip\(\s*\)zip;|&
-application/wasmwasm;|' /etc/nginx/mime.types
+# 沒有的話，在 application/zip 那行後面插一行
+grep -q wasm /etc/nginx/mime.types || sudo sed -i '/application\/zip/a\    application/wasm                      wasm;' /etc/nginx/mime.types
 grep wasm /etc/nginx/mime.types && sudo nginx -t && sudo systemctl reload nginx
 ```
 
