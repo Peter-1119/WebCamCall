@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "Optional default overlay components for @scanner/vue",
   "type": "module",
-  "sideEffects": ["**/*.css"],
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,7 +14,9 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "vite build",
     "typecheck": "vue-tsc --noEmit"
@@ -28,6 +30,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/test-utils": "^2.5.0",
+    "vite-plugin-css-injected-by-js": "^5.0.2",
     "vite-plugin-dts": "^5.1.0",
     "vue": "^3.5.42",
     "vue-tsc": "^3.3.11"

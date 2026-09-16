@@ -1,7 +1,9 @@
 /**
- * @scanner/ui
- *
- * Phase 5 會在這裡實作 <ScannerOverlay>。
- * 目前放一個空元件驗證 SFC → lib build → .d.ts 的流程。
+ * @scanner/ui — 預設 overlay 與全包元件。零文案：所有文字透過 slot 由 App 提供。
  */
 export { default as ScannerOverlay } from './ScannerOverlay.vue'
+export { default as BarcodeScanner } from './BarcodeScanner.vue'
+export { useSmoothQuad } from './useSmoothQuad'
+export type { SmoothQuadOptions } from './useSmoothQuad'
+export { useHint } from './useHint'
+export type { HintCode, HintOptions } from './useHint'

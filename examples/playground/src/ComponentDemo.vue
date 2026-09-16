@@ -1,0 +1,53 @@
+<script setup>
+import { ref } from 'vue'
+import { BarcodeScanner } from '@scanner/ui'
+
+// 「5 行跑起來」的用法：元件包好相機、overlay、震動；文案全部由這裡（App）提供
+const scanner = ref(null)
+const results = ref([])
+const hintText = { align: '把條碼對進框內', 'move-closer': '靠近一點', 'hold-steady': '拿穩一點' }
+const errorText = { 'permission-denied': '請允許相機權限', 'no-camera': '找不到相機', 'camera-in-use': '相機被其他 App 佔用' }
+const onDecoded = (r) => results.value.unshift(`${r.format}: ${r.text}`)
+</script>
+
+<template>
+  <main class="app">
+    <div class="viewport">
+      <BarcodeScanner
+        ref="scanner"
+        :formats="['qr_code', 'code_128', 'ean_13']"
+        sound=""
+        @decoded="onDecoded"
+      >
+        <!-- 提示與錯誤文案由 App 提供，元件只給 code -->
+        <template #hint="{ hint }"><span class="pill">{{ hintText[hint] ?? hint }}</span></template>
+        <template #status="{ state }">狀態：{{ state }}</template>
+        <template #error="{ error, retry }">
+          <div class="err">
+            <p>{{ errorText[error?.code] ?? error?.code }}</p>
+            <button @click="retry">重試</button>
+          </div>
+        </template>
+        <template #actions="{ state, close }">
+          <button class="mini" @click="close">✕</button>
+        </template>
+        <!-- default slot 拿到 composable 的全部回傳 -->
+        <template #default="{ state, start, stop }">
+          <button class="fab" @click="state === 'scanning' ? stop() : start()">{{ state === 'scanning' ? 'Stop' : 'Start' }}</button>
+        </template>
+      </BarcodeScanner>
+    </div>
+    <ul class="results"><li v-for="(r, i) in results" :key="i">{{ r }}</li></ul>
+  </main>
+</template>
+
+<style scoped>
+.app { display: flex; flex-direction: column; gap: 8px; padding: 8px; max-width: 480px; margin: 0 auto; }
+.viewport { width: 100%; aspect-ratio: 3 / 4; }
+.pill { background: rgba(0,0,0,.7); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 14px; }
+.err { background: rgba(0,0,0,.8); padding: 16px; border-radius: 8px; text-align: center; }
+.mini { background: rgba(0,0,0,.5); color: #fff; border: 0; width: 32px; height: 32px; border-radius: 50%; }
+.fab { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); padding: 12px 28px; font-size: 16px; border-radius: 999px; border: 0; }
+.results { list-style: none; margin: 0; padding: 0; font-size: 14px; max-height: 200px; overflow: auto; background: #1a1a1a; }
+.results li { padding: 4px 8px; border-bottom: 1px solid #333; word-break: break-all; }
+</style>

@@ -2,18 +2,21 @@
 import { ref } from 'vue'
 import CoreDemo from './CoreDemo.vue'
 import VueDemo from './VueDemo.vue'
+import ComponentDemo from './ComponentDemo.vue'
 
-const tab = ref(localStorage.getItem('demo') ?? 'vue')
+const tab = ref(localStorage.getItem('demo') ?? 'ui')
 const pick = (t) => { tab.value = t; localStorage.setItem('demo', t) }
 </script>
 
 <template>
   <nav class="tabs">
+    <button :class="{ on: tab === 'ui' }" @click="pick('ui')">&lt;BarcodeScanner&gt;</button>
     <button :class="{ on: tab === 'vue' }" @click="pick('vue')">useBarcodeScanner()</button>
     <button :class="{ on: tab === 'core' }" @click="pick('core')">@scanner/core</button>
   </nav>
   <!-- key 讓切換時整個 demo 重建，相機一定會被 stop -->
-  <VueDemo v-if="tab === 'vue'" key="vue" />
+  <ComponentDemo v-if="tab === 'ui'" key="ui" />
+  <VueDemo v-else-if="tab === 'vue'" key="vue" />
   <CoreDemo v-else key="core" />
 </template>
 
