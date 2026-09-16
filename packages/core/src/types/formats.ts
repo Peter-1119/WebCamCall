@@ -63,6 +63,31 @@ export const ALL_FORMATS: readonly BarcodeFormat[] = [
   'maxicode',
 ]
 
+/**
+ * 常用的格式組合。**格式越少解碼越快**：zxing 對一維（掃線）與二維（定位圖案）是兩套演算法，
+ * 只給一種就只跑一套。場景固定時請用單一組合，混合場景再用 `[...QR_FORMATS, ...LINEAR_FORMATS]`。
+ * 執行期可用 `scanner.updateOptions({ formats })` 熱切換。
+ */
+export const QR_FORMATS: readonly BarcodeFormat[] = ['qr_code']
+
+/** 所有一維條碼（商品 EAN/UPC、物流 Code 128/39/93、ITF、Codabar、DataBar）。 */
+export const LINEAR_FORMATS: readonly BarcodeFormat[] = [
+  'ean_13',
+  'ean_8',
+  'upc_a',
+  'upc_e',
+  'code_128',
+  'code_39',
+  'code_93',
+  'codabar',
+  'itf',
+  'databar',
+  'databar_expanded',
+]
+
+/** 所有二維碼（QR、Micro QR、Aztec、Data Matrix、PDF417、MaxiCode）。 */
+export const MATRIX_FORMATS: readonly BarcodeFormat[] = ['qr_code', 'micro_qr', 'aztec', 'data_matrix', 'pdf417', 'maxicode']
+
 /** 解碼後端識別。 */
 export type DecoderBackend = 'native' | 'wasm'
 

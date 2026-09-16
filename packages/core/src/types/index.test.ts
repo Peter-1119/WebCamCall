@@ -8,7 +8,7 @@ import type {
   ToElementSpace,
   UnsupportedFormatError,
 } from './index'
-import { ALL_FORMATS, STATE_TRANSITIONS } from './index'
+import { ALL_FORMATS, LINEAR_FORMATS, MATRIX_FORMATS, QR_FORMATS, STATE_TRANSITIONS } from './index'
 
 describe('types: narrowing contracts', () => {
   it('ScanEventOf narrows by type', () => {
@@ -92,8 +92,15 @@ describe('STATE_TRANSITIONS', () => {
   })
 })
 
-describe('ALL_FORMATS', () => {
-  it('has no duplicates', () => {
+describe('format presets', () => {
+  it('ALL_FORMATS has no duplicates', () => {
     expect(new Set(ALL_FORMATS).size).toBe(ALL_FORMATS.length)
+  })
+
+  it('LINEAR and MATRIX are disjoint and together cover ALL', () => {
+    const linear = new Set(LINEAR_FORMATS)
+    for (const f of MATRIX_FORMATS) expect(linear.has(f), f).toBe(false)
+    expect(new Set([...LINEAR_FORMATS, ...MATRIX_FORMATS]).size).toBe(ALL_FORMATS.length)
+    expect(QR_FORMATS).toEqual(['qr_code'])
   })
 })

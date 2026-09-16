@@ -14,7 +14,7 @@ export type {
 } from './geometry'
 
 export type { BarcodeFormat, DecoderBackend, BackendPreference } from './formats'
-export { ALL_FORMATS } from './formats'
+export { ALL_FORMATS, QR_FORMATS, LINEAR_FORMATS, MATRIX_FORMATS } from './formats'
 
 export type { ScannerState, ScannerAction } from './state'
 export { STATE_TRANSITIONS } from './state'

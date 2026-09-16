@@ -76,7 +76,10 @@ export interface DecodeScaleOptions {
  * 其他欄位改了要 `stop()` 再 `start()`。
  */
 export interface ScannerOptions {
-  /** 要辨識的格式，預設 `['qr_code']`。格式越少解碼越快。 */
+  /**
+   * 要辨識的格式，預設 `['qr_code']`。**格式越少解碼越快**（一維與二維是兩套演算法）。
+   * 場景固定就給單一組合（`QR_FORMATS` / `LINEAR_FORMATS`），混合場景再合併；可用 `updateOptions()` 熱切換。
+   */
   readonly formats?: readonly BarcodeFormat[]
   /** 見 {@link BackendPreference}，預設 `'auto'`。 */
   readonly backend?: BackendPreference
