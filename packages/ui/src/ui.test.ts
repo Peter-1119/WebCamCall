@@ -2,6 +2,7 @@ import { effectScope, nextTick, ref, shallowRef } from 'vue'
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Candidate, DecodedResult, Quad, ScannerState } from '@scanner/core'
+import BarcodeScanner from './BarcodeScanner.vue'
 import ScannerOverlay from './ScannerOverlay.vue'
 import { useHint } from './useHint'
 import { useSmoothQuad } from './useSmoothQuad'
@@ -103,6 +104,39 @@ describe('useHint', () => {
     vi.advanceTimersByTime(500)
     expect(hint.value).toBeNull() // quiet after decode
     scope.stop()
+  })
+})
+
+vi.mock('@scanner/vue', () => ({
+  useBarcodeScanner: () => ({
+    state: shallowRef('scanning'),
+    error: shallowRef(null),
+    backend: shallowRef('wasm'),
+    camera: shallowRef(null),
+    capabilities: shallowRef(null),
+    settings: shallowRef(null),
+    lastResult: shallowRef(null),
+    candidates: shallowRef([]),
+    support: shallowRef(null),
+    scanner: shallowRef(null),
+    start: vi.fn(async () => {}),
+    stop: vi.fn(async () => {}),
+    pause: vi.fn(),
+    resume: vi.fn(),
+    toggleTorch: vi.fn(async () => {}),
+    setZoom: vi.fn(async () => {}),
+    switchCamera: vi.fn(async () => {}),
+    updateOptions: vi.fn(),
+  }),
+}))
+
+describe('<BarcodeScanner>', () => {
+  it('default slot and template ref receive unwrapped values', async () => {
+    const w = mount(BarcodeScanner, { slots: { default: '<i class="st">{{ params.state }}</i>' } })
+    await nextTick()
+    expect(w.find('.st').text()).toBe('scanning')
+    expect((w.vm as unknown as { state: string }).state).toBe('scanning')
+    expect(typeof (w.vm as unknown as { start: unknown }).start).toBe('function')
   })
 })
 

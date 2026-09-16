@@ -9,7 +9,7 @@
  * composable 的回傳透過 `defineExpose` 與 default slot 全部露出，需要進階控制時不用換元件。
  * 所有 overlay 的 slot（hint / status / error / actions）原樣轉發。
  */
-import { computed, ref } from 'vue'
+import { computed, proxyRefs, ref } from 'vue'
 import type { BackendPreference, BarcodeFormat, CameraOptions, DecodeScaleOptions, DecodedResult, ObjectFit, Roi, ScannerError, ScannerState, WasmOptions } from '@scanner/core'
 import { useBarcodeScanner } from '@scanner/vue'
 import ScannerOverlay from './ScannerOverlay.vue'
@@ -80,6 +80,9 @@ const api = useBarcodeScanner(video, () => ({
   onStateChange: (s, p) => emit('state', s, p),
 }))
 
+// slot 與 template ref 拿到的是 unwrap 過的值（state 是字串而不是 Ref），寫法與一般 props 一致
+const exposed = proxyRefs(api)
+
 const videoStyle = computed(() => ({ objectFit: props.objectFit, transform: props.mirror ? 'scaleX(-1)' : undefined }))
 
 function retry() {
@@ -87,7 +90,7 @@ function retry() {
   void api.start().catch(() => {})
 }
 
-defineExpose(api)
+defineExpose(exposed)
 </script>
 
 <template>
@@ -109,7 +112,7 @@ defineExpose(api)
       <template v-if="$slots.error" #error="p"><slot name="error" v-bind="p" /></template>
       <template v-if="$slots.actions" #actions="p"><slot name="actions" v-bind="p" /></template>
     </ScannerOverlay>
-    <div class="bs__slot"><slot v-bind="api" /></div>
+    <div class="bs__slot"><slot v-bind="exposed" /></div>
   </div>
 </template>
 
