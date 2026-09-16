@@ -10,7 +10,7 @@ packages/
 examples/
   playground/             四個分頁：<BarcodeScanner> / composable / core / bench
 docs/
-  install.md              其他專案怎麼安裝（.tgz）
+  install.md              其他專案怎麼安裝（npm）
   device-checklist.md     實機測試檢查表
   deploy.md               部署與廠內環境的坑
   barcode-scanner-prompts.md  原始的開發提示詞包
@@ -18,7 +18,11 @@ docs/
 
 ## 安裝到其他專案
 
-沒有 npm registry：用 GitHub Releases 的 `.tgz` 檔，步驟見 **`docs/install.md`**（`pnpm release:pack` 可自己產）。
+```bash
+pnpm add @cclemon/scanner-ui @cclemon/scanner-vue @cclemon/scanner-core
+```
+
+wasm 檔已包在 core 裡：Vite 專案 `import wasmUrl from '@cclemon/scanner-core/zxing_reader.wasm?url'`。完整步驟見 **`docs/install.md`**。
 
 ## 快速開始
 
@@ -27,11 +31,12 @@ docs/
 ```vue
 <script setup>
 import { BarcodeScanner } from '@cclemon/scanner-ui'
+import wasmUrl from '@cclemon/scanner-core/zxing_reader.wasm?url'
 const onDecoded = (r) => console.log(r.text, r.format)
 </script>
 
 <template>
-  <BarcodeScanner :formats="['qr_code']" wasm-url="/scanner/zxing_reader.wasm" @decoded="onDecoded">
+  <BarcodeScanner :formats="['qr_code']" :wasm-url="wasmUrl" @decoded="onDecoded">
     <template #hint="{ hint }">{{ { align: '對準框內', 'move-closer': '靠近一點', 'hold-steady': '拿穩' }[hint] }}</template>
     <template #error="{ error, retry }"><button @click="retry">{{ error.code }}</button></template>
   </BarcodeScanner>

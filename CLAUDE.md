@@ -48,6 +48,8 @@ packages/
   細節見 `docs/deploy.md`；實機測試項目見 `docs/device-checklist.md`。
 - 工具限制：Bash heredoc 超過約 170 行會被截斷（改用 Write 工具）；heredoc 內 `` 會變成 backspace 字元。
 - **語言**：library（packages/*）用 TypeScript；examples/playground 用純 JS。
+- **發布**：公開 npm `@cclemon/scanner-{core,vue,ui}`（帳號 cclemon，2FA 需本人在終端機 `npm publish ./release/*.tgz`）；
+  wasm 檔包在 core 的 dist 並 export `./zxing_reader.wasm`。GitHub：Peter-1119/WebCamCall（private）。
 - **多尺度解碼**（`options.decodeScale`）：解碼成本與像素數成正比，但小碼/遠距需要
   足夠像素。三層策略：基準降採樣（640）→ 連續 N 幀無結果時沿階梯升級
   （960 → 1280 → 全解析度，成功後記住尺度）→ wasm 路徑對「找到位置但解不出」

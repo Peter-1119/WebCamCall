@@ -206,9 +206,6 @@ importers:
       '@vitejs/plugin-vue':
         specifier: ^6.0.9
         version: 6.0.9(vite@8.3.0(@types/node@26.5.1)(esbuild@0.27.7))(vue@3.5.42(typescript@5.9.3))
-      zxing-wasm:
-        specifier: 3.1.4
-        version: 3.1.4(@types/emscripten@1.41.6)
 
   packages/core:
     devDependencies:

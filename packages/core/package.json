@@ -1,6 +1,6 @@
 {
   "name": "@cclemon/scanner-core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Headless, framework-agnostic barcode / QR scanner core",
   "license": "MIT",
   "repository": {
@@ -21,13 +21,15 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./zxing_reader.wasm": "./dist/zxing_reader.wasm",
+    "./wasm-worker.js": "./dist/wasm-worker.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rimraf dist && tsup",
+    "build": "rimraf dist && tsup && node scripts/copy-wasm.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "dev": "tsup --watch"
