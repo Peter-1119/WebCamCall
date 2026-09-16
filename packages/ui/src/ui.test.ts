@@ -1,7 +1,7 @@
 import { effectScope, nextTick, ref, shallowRef } from 'vue'
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Candidate, DecodedResult, Quad, ScannerState } from '@scanner/core'
+import type { Candidate, DecodedResult, Quad, ScannerState } from '@cclemon/scanner-core'
 import BarcodeScanner from './BarcodeScanner.vue'
 import ScannerOverlay from './ScannerOverlay.vue'
 import { useHint } from './useHint'
@@ -107,7 +107,7 @@ describe('useHint', () => {
   })
 })
 
-vi.mock('@scanner/vue', () => ({
+vi.mock('@cclemon/scanner-vue', () => ({
   useBarcodeScanner: () => ({
     state: shallowRef('scanning'),
     error: shallowRef(null),

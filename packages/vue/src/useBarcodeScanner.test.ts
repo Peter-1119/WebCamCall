@@ -1,6 +1,6 @@
 import { effectScope, nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { BarcodeFormat, Candidate, DecodedResult, ScanEvent, Scanner, ScannerState } from '@scanner/core'
+import type { BarcodeFormat, Candidate, DecodedResult, ScanEvent, Scanner, ScannerState } from '@cclemon/scanner-core'
 
 // 假的 core：記錄 createScanner 的呼叫，讓測試能對 listener 發事件
 interface FakeScanner extends Scanner {
@@ -48,7 +48,7 @@ const createScannerMock = vi.fn((_video: HTMLVideoElement, options: unknown): Fa
   instances.push(inst)
   return inst
 })
-vi.mock('@scanner/core', () => ({
+vi.mock('@cclemon/scanner-core', () => ({
   createScanner: (v: HTMLVideoElement, o: unknown) => createScannerMock(v, o),
   probeSupport: vi.fn(async () => ({ secureContext: true })),
 }))

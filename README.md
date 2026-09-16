@@ -4,9 +4,9 @@ Headless core + Vue composable + 預設 UI。主要目標裝置 iPad Safari，�
 
 ```
 packages/
-  core/   @scanner/core   零依賴、不綁框架：相機管線、wasm/native 解碼、狀態機、座標換算
-  vue/    @scanner/vue    useBarcodeScanner() composable（同時 re-export core）
-  ui/     @scanner/ui     <BarcodeScanner> 全包元件、<ScannerOverlay> 預設 overlay（零文案）
+  core/   @cclemon/scanner-core   零依賴、不綁框架：相機管線、wasm/native 解碼、狀態機、座標換算
+  vue/    @cclemon/scanner-vue    useBarcodeScanner() composable（同時 re-export core）
+  ui/     @cclemon/scanner-ui     <BarcodeScanner> 全包元件、<ScannerOverlay> 預設 overlay（零文案）
 examples/
   playground/             四個分頁：<BarcodeScanner> / composable / core / bench
 docs/
@@ -26,7 +26,7 @@ docs/
 
 ```vue
 <script setup>
-import { BarcodeScanner } from '@scanner/ui'
+import { BarcodeScanner } from '@cclemon/scanner-ui'
 const onDecoded = (r) => console.log(r.text, r.format)
 </script>
 
@@ -43,7 +43,7 @@ const onDecoded = (r) => console.log(r.text, r.format)
 ```vue
 <script setup>
 import { ref } from 'vue'
-import { useBarcodeScanner, QR_FORMATS, LINEAR_FORMATS } from '@scanner/vue'
+import { useBarcodeScanner, QR_FORMATS, LINEAR_FORMATS } from '@cclemon/scanner-vue'
 
 const video = ref(null)
 const mode = ref('qr')
@@ -57,7 +57,7 @@ const { state, lastResult, error, start, stop } = useBarcodeScanner(video, () =>
 ### 純 JS / 其他框架：core
 
 ```js
-import { createScanner } from '@scanner/core'
+import { createScanner } from '@cclemon/scanner-core'
 
 const scanner = createScanner(videoEl, { formats: ['qr_code'], wasm: { wasmUrl: '/zxing_reader.wasm' } })
 scanner.on('decoded', ({ result }) => console.log(result.text))

@@ -1,6 +1,6 @@
 <script setup>
 import { onBeforeUnmount, onMounted, reactive, ref, shallowRef } from 'vue'
-import { createDecoder, createScanner, getElementTransform, probeSupport, rectToElementSpace, toElementSpace } from '@scanner/core'
+import { createDecoder, createScanner, getElementTransform, probeSupport, rectToElementSpace, toElementSpace } from '@cclemon/scanner-core'
 
 // eslint-disable-next-line no-undef
 const build = typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'

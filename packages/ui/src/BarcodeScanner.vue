@@ -10,8 +10,8 @@
  * 所有 overlay 的 slot（hint / status / error / actions）原樣轉發。
  */
 import { computed, proxyRefs, ref } from 'vue'
-import type { BackendPreference, BarcodeFormat, CameraOptions, DecodeScaleOptions, DecodedResult, ObjectFit, Roi, ScannerError, ScannerState, WasmOptions } from '@scanner/core'
-import { useBarcodeScanner } from '@scanner/vue'
+import type { BackendPreference, BarcodeFormat, CameraOptions, DecodeScaleOptions, DecodedResult, ObjectFit, Roi, ScannerError, ScannerState, WasmOptions } from '@cclemon/scanner-core'
+import { useBarcodeScanner } from '@cclemon/scanner-vue'
 import ScannerOverlay from './ScannerOverlay.vue'
 
 const props = withDefaults(

@@ -1,6 +1,6 @@
 import { getCurrentScope, onScopeDispose, shallowReadonly, shallowRef, toValue, watch } from 'vue'
 import type { MaybeRefOrGetter, Ref, ShallowRef } from 'vue'
-import { createScanner, probeSupport } from '@scanner/core'
+import { createScanner, probeSupport } from '@cclemon/scanner-core'
 import type {
   CameraCapabilities,
   CameraInfo,
@@ -16,7 +16,7 @@ import type {
   ScannerOptions,
   ScannerState,
   SupportReport,
-} from '@scanner/core'
+} from '@cclemon/scanner-core'
 
 export interface UseBarcodeScannerOptions extends ScannerOptions {
   /** 與 `lastResult` ref 並行；兩者可同時用。 */

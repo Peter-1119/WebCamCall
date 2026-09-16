@@ -21,7 +21,7 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       // 全部交給 App 端 bundler 處理，ui 只打包自己的元件
-      external: ['vue', '@scanner/core', '@scanner/vue'],
+      external: ['vue', '@cclemon/scanner-core', '@cclemon/scanner-vue'],
     },
   },
 })

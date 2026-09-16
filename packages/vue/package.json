@@ -1,7 +1,7 @@
 {
-  "name": "@scanner/vue",
-  "version": "0.1.0",
-  "description": "Vue 3 composable for @scanner/core",
+  "name": "@cclemon/scanner-vue",
+  "version": "0.1.1",
+  "description": "Vue 3 composable for @cclemon/scanner-core",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -32,10 +32,10 @@
   },
   "peerDependencies": {
     "vue": "^3.3.0",
-    "@scanner/core": "*"
+    "@cclemon/scanner-core": "*"
   },
   "devDependencies": {
     "vue": "^3.5.42",
-    "@scanner/core": "workspace:*"
+    "@cclemon/scanner-core": "workspace:*"
   }
 }

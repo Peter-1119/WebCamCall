@@ -10,9 +10,9 @@
     "build": "pnpm -r --filter \"./packages/*\" run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
-    "dev": "pnpm -r --parallel --filter @scanner/core --filter playground run dev",
+    "dev": "pnpm -r --parallel --filter @cclemon/scanner-core --filter playground run dev",
     "clean": "pnpm -r exec rm -rf dist",
-    "dev:core": "pnpm --filter @scanner/core dev",
+    "dev:core": "pnpm --filter @cclemon/scanner-core dev",
     "release:pack": "bash scripts/release-pack.sh"
   },
   "devDependencies": {

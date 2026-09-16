@@ -8,9 +8,9 @@ https://github.com/Peter-1119/WebCamCall/releases
 ## 1. 取得四個檔案
 
 ```
-scanner-core-0.1.0.tgz
-scanner-vue-0.1.0.tgz      ← Vue 專案才需要
-scanner-ui-0.1.0.tgz       ← 要用 <BarcodeScanner> 才需要
+cclemon-scanner-core-0.1.1.tgz
+cclemon-scanner-vue-0.1.1.tgz      ← Vue 專案才需要
+cclemon-scanner-ui-0.1.1.tgz       ← 要用 <BarcodeScanner> 才需要
 zxing_reader.wasm          ← 一定要，放進 App 的靜態目錄
 ```
 
@@ -29,9 +29,9 @@ cp zxing_reader.wasm public/          # Vite 專案；其他框架放到會被�
 ```json
 {
   "dependencies": {
-    "@scanner/core": "file:./vendor/scanner-core-0.1.0.tgz",
-    "@scanner/vue":  "file:./vendor/scanner-vue-0.1.0.tgz",
-    "@scanner/ui":   "file:./vendor/scanner-ui-0.1.0.tgz",
+    "@cclemon/scanner-core": "file:./vendor/cclemon-scanner-core-0.1.1.tgz",
+    "@cclemon/scanner-vue":  "file:./vendor/cclemon-scanner-vue-0.1.1.tgz",
+    "@cclemon/scanner-ui":   "file:./vendor/cclemon-scanner-ui-0.1.1.tgz",
     "vue": "^3.3.0"
   }
 }
@@ -45,7 +45,7 @@ pnpm install     # npm / yarn 也可以
 
 ```vue
 <script setup>
-import { BarcodeScanner } from '@scanner/ui'
+import { BarcodeScanner } from '@cclemon/scanner-ui'
 const onDecoded = (r) => console.log(r.text, r.format)
 </script>
 
@@ -61,7 +61,7 @@ const onDecoded = (r) => console.log(r.text, r.format)
 
 - **`wasm-url` 一定要給**，路徑是 App 部署後 `zxing_reader.wasm` 的 URL。掛在子路徑（例如 `/rms/`）時要寫 `/rms/zxing_reader.wasm`，Vite 專案可用 `` `${import.meta.env.BASE_URL}zxing_reader.wasm` ``。
 - `<BarcodeScanner>` 會填滿父容器，父容器要給尺寸。
-- 只掃一維條碼：`:formats="LINEAR_FORMATS"`（從 `@scanner/vue` import）。
+- 只掃一維條碼：`:formats="LINEAR_FORMATS"`（從 `@cclemon/scanner-vue` import）。
 - 不用 `<BarcodeScanner>`、自己排版：用 `useBarcodeScanner()`，見 README。
 
 ## 4. 部署要注意
@@ -79,5 +79,5 @@ const onDecoded = (r) => console.log(r.text, r.format)
 
 ## 之後若發到 npm
 
-套件會改名成 `@peter-1119/scanner-core` 等，安裝變成一行 `pnpm add @peter-1119/scanner-ui`，
+套件會改名成 `@cclemon/scanner-core` 等，安裝變成一行 `pnpm add @cclemon/scanner-ui`，
 使用方式不變（只有 import 路徑的套件名改）。

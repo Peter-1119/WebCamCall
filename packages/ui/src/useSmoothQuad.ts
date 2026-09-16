@@ -1,6 +1,6 @@
 import { onScopeDispose, shallowRef, watch } from 'vue'
 import type { Ref, ShallowRef } from 'vue'
-import type { Point, Quad } from '@scanner/core'
+import type { Point, Quad } from '@cclemon/scanner-core'
 
 export interface SmoothQuadOptions {
   /** 每個 rAF 往目標靠近的比例，0..1。越大越跟手、越小越平滑。預設 0.35。 */

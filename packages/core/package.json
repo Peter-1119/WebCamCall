@@ -1,6 +1,6 @@
 {
-  "name": "@scanner/core",
-  "version": "0.1.0",
+  "name": "@cclemon/scanner-core",
+  "version": "0.1.1",
   "description": "Headless, framework-agnostic barcode / QR scanner core",
   "license": "MIT",
   "repository": {

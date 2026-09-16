@@ -190,13 +190,13 @@ importers:
 
   examples/playground:
     dependencies:
-      '@scanner/core':
+      '@cclemon/scanner-core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@scanner/ui':
+      '@cclemon/scanner-ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      '@scanner/vue':
+      '@cclemon/scanner-vue':
         specifier: workspace:*
         version: link:../../packages/vue
       vue:
@@ -224,10 +224,10 @@ importers:
 
   packages/ui:
     devDependencies:
-      '@scanner/core':
+      '@cclemon/scanner-core':
         specifier: workspace:*
         version: link:../core
-      '@scanner/vue':
+      '@cclemon/scanner-vue':
         specifier: workspace:*
         version: link:../vue
       '@vitejs/plugin-vue':
@@ -251,7 +251,7 @@ importers:
 
   packages/vue:
     devDependencies:
-      '@scanner/core':
+      '@cclemon/scanner-core':
         specifier: workspace:*
         version: link:../core
       vue:

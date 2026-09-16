@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { BarcodeScanner } from '@scanner/ui'
+import { BarcodeScanner } from '@cclemon/scanner-ui'
 
 // 「5 行跑起來」的用法：元件包好相機、overlay、震動；文案全部由這裡（App）提供
 const scanner = ref(null)

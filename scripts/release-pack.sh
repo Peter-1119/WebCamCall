@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 pnpm build
 rm -rf release && mkdir -p release
 for p in core vue ui; do
-  pnpm --filter "@scanner/$p" pack --pack-destination "$PWD/release" > /dev/null
+  pnpm --filter "@cclemon/scanner-$p" pack --pack-destination "$PWD/release" > /dev/null
 done
 cp node_modules/.pnpm/zxing-wasm@*/node_modules/zxing-wasm/dist/reader/zxing_reader.wasm release/ 2>/dev/null \
   || cp packages/core/node_modules/zxing-wasm/dist/reader/zxing_reader.wasm release/

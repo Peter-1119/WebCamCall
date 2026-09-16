@@ -20,10 +20,10 @@ export default defineConfig({
   base: process.env.PLAYGROUND_BASE || '/',
   define: { __BUILD__: JSON.stringify(buildStamp) },
   plugins: [vue(), ...(useHttps ? [basicSsl()] : [])],
-  // @scanner/* 透過 workspace link 直接吃各 package 的 dist（開發時 `pnpm dev` 會同時跑 tsup --watch）。
+  // @cclemon/scanner-* 透過 workspace link 直接吃各 package 的 dist（開發時 `pnpm dev` 會同時跑 tsup --watch）。
   // 好處：開發期測的就是真正的打包產物，Worker 路徑等問題在開發期就會暴露。
   // 不要把它們 pre-bundle，否則 `new URL('./wasm-worker.js', import.meta.url)` 會失效。
-  optimizeDeps: { exclude: ['@scanner/core', '@scanner/vue', '@scanner/ui'] },
+  optimizeDeps: { exclude: ['@cclemon/scanner-core', '@cclemon/scanner-vue', '@cclemon/scanner-ui'] },
   server: {
     host: true, // 讓手機透過區網 IP 連進來
     port: useHttps ? 5173 : 5174,

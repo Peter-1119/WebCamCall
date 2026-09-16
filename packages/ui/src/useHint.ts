@@ -1,6 +1,6 @@
 import { onScopeDispose, shallowRef, watch } from 'vue'
 import type { Ref, ShallowRef } from 'vue'
-import type { Candidate, DecodedResult, ScannerState } from '@scanner/core'
+import type { Candidate, DecodedResult, ScannerState } from '@cclemon/scanner-core'
 
 /**
  * 提示代碼（**不是文案**，App 自己對 i18n）：

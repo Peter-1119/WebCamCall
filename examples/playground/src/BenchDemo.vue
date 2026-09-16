@@ -1,6 +1,6 @@
 <script setup>
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { createScanner, rectToElementSpace } from '@scanner/core'
+import { createScanner, rectToElementSpace } from '@cclemon/scanner-core'
 
 /**
  * 效能量測（Phase 7）。把一張 QR 放在框內不動，按 Run：

@@ -12,7 +12,7 @@ Android Chrome / 桌機 Firefox / Safari 的項目列在最後，目前不列為
 
 ## A. iPad Safari — 必測
 
-### A1 相機開啟（分頁 `@scanner/core`）
+### A1 相機開啟（分頁 `@cclemon/scanner-core`）
 
 | # | 步驟 | 預期 | 結果 | 備註 |
 |---|---|---|---|---|
@@ -24,7 +24,7 @@ Android Chrome / 桌機 Firefox / Safari 的項目列在最後，目前不列為
 | 6 | 拒絕權限 | `error: permission-denied`，`state: failed`，再按 Start 可重試 | ⬜ | 要在設定裡重設網站權限 |
 | 7 | Next cam 循環 | 後置 → 前置 → 前置超廣角 → 後置，每次 log 一筆 `camera:` | ✅ 2026-09-15 | |
 
-### A2 幀管線（分頁 `@scanner/core`）
+### A2 幀管線（分頁 `@cclemon/scanner-core`）
 
 | # | 步驟 | 預期 | 結果 | 備註 |
 |---|---|---|---|---|
@@ -78,7 +78,7 @@ Android Chrome / 桌機 Firefox / Safari 的項目列在最後，目前不列為
 | 2 | 5 分鐘 soak | fps 不下降、延遲不變差、無 ERROR | ✅ 2026-09-16 | 4489 events（99.8%），p50 23 / p95 25 ms 與 30 s 相同，dropped 30，stalls 0 |
 | 3 | 5 分鐘後 iPad 溫度 | 溫熱可接受，燙手需回報 | ⬜ | |
 
-### A7 單張圖片（分頁 `@scanner/core` → 解碼圖片檔）
+### A7 單張圖片（分頁 `@cclemon/scanner-core` → 解碼圖片檔）
 
 | # | 步驟 | 預期 | 結果 | 備註 |
 |---|---|---|---|---|

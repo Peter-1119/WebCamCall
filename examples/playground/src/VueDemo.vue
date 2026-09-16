@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import {
   useBarcodeScanner, getElementTransform, rectToElementSpace, toElementSpace,
   QR_FORMATS, LINEAR_FORMATS,
-} from '@scanner/vue'
+} from '@cclemon/scanner-vue'
 
 // eslint-disable-next-line no-undef
 const build = typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'

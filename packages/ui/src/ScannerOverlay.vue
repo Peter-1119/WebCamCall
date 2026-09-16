@@ -9,9 +9,9 @@
  * - 零文案；鍵盤 Escape → `close`，failed 時 Enter → `retry`
  */
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { getElementTransform, rectToElementSpace, toElementSpace } from '@scanner/core'
-import type { ElementTransform, ObjectFit, Quad, Rect } from '@scanner/core'
-import type { UseBarcodeScannerReturn } from '@scanner/vue'
+import { getElementTransform, rectToElementSpace, toElementSpace } from '@cclemon/scanner-core'
+import type { ElementTransform, ObjectFit, Quad, Rect } from '@cclemon/scanner-core'
+import type { UseBarcodeScannerReturn } from '@cclemon/scanner-vue'
 import { useHint } from './useHint'
 import { useSmoothQuad } from './useSmoothQuad'
 

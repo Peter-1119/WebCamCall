@@ -11,9 +11,9 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
-    "@scanner/core": "workspace:*",
-    "@scanner/ui": "workspace:*",
-    "@scanner/vue": "workspace:*",
+    "@cclemon/scanner-core": "workspace:*",
+    "@cclemon/scanner-ui": "workspace:*",
+    "@cclemon/scanner-vue": "workspace:*",
     "vue": "^3.5.42"
   },
   "devDependencies": {
