@@ -1,3 +1,9 @@
+<!-- 此檔由 scripts/sync-docs.mjs 從 docs/ 產生，請改 docs/ 再重跑 build -->
+
+# @cclemon/scanner-ui
+
+`<BarcodeScanner>` 全包元件與 `<ScannerOverlay>`（零文案）。完整手冊在 `@cclemon/scanner-core` 的 README（同一份 GUIDE.md）。
+
 # @cclemon/scanner 快速上手（Vue 3 + Vite）
 
 條碼 / QR 掃描，iPad Safari 實測：對準後約 25 ms 出結果。

@@ -1,6 +1,6 @@
 {
   "name": "@cclemon/scanner-ui",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Optional default overlay components for @cclemon/scanner-vue",
   "license": "MIT",
   "repository": {
@@ -24,7 +24,9 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "vite build",
