@@ -138,5 +138,7 @@ const { state, lastResult, error, start, stop, toggleTorch, capabilities } = use
 
 ## 更多
 
+- **完整手冊**（所有選項與調校、食譜、疑難排解）：`docs/GUIDE.md`
+
 - 完整說明與 iPad 實測數據：https://github.com/Peter-1119/WebCamCall （private）
 - 部署細節：`docs/deploy.md`；實機檢查表：`docs/device-checklist.md`

@@ -28,6 +28,10 @@ const props = withDefaults(
     rescanDelayMs?: number
     targetFps?: number
     multi?: boolean
+    /** 點陣式（DPM）Data Matrix 前處理；`'auto'` = formats 含 data_matrix 時開啟。 */
+    dotted?: boolean | 'auto'
+    /** 每秒發 `stats` 事件（透過 template ref 的 `scanner.on('stats')` 取得）。 */
+    emitStats?: boolean
     autoStart?: boolean
     /** 前鏡頭常見的鏡像顯示；會同步套到座標換算。 */
     mirror?: boolean
@@ -45,6 +49,8 @@ const props = withDefaults(
     rescanDelayMs: 1500,
     targetFps: 15,
     multi: false,
+    dotted: 'auto',
+    emitStats: false,
     autoStart: false,
     mirror: false,
     objectFit: 'cover',
@@ -76,6 +82,8 @@ const api = useBarcodeScanner(video, () => ({
   rescanDelayMs: props.rescanDelayMs,
   targetFps: props.targetFps,
   multi: props.multi,
+  dotted: props.dotted,
+  emitStats: props.emitStats,
   autoStart: props.autoStart,
   onDecoded: (r) => emit('decoded', r),
   onError: (e) => emit('error', e),

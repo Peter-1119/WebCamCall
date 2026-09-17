@@ -11,6 +11,7 @@ examples/
   playground/             四個分頁：<BarcodeScanner> / composable / core / bench
 docs/
   QUICKSTART.md           其他專案快速上手（可直接複製過去）
+  GUIDE.md                完整使用手冊：所有選項、事件、狀態、錯誤、調校、食譜、疑難排解
   install.md              其他專案怎麼安裝（npm）
   device-checklist.md     實機測試檢查表
   deploy.md               部署與廠內環境的坑
