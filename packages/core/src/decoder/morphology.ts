@@ -163,17 +163,53 @@ export function dottedKernels(_width?: number): number[] {
 }
 
 /**
- * 輪替器：每幀一個變體（核 × 極性），成功就記住並優先用；連續失敗才往下走。
- * 極性順序 dark 先（PCB 金面鑽孔最常見），再 light。
+ * 由「定位到的候選框寬度」估膨脹核：假設 Data Matrix 約 22 個模組（常見 18–26），
+ * 核 ≈ 1.4 × 模組，取奇數、限制在 3–17。有這個估計時就不用盲目輪替 12 個變體。
+ */
+export function kernelFromSymbolWidth(widthPx: number, modules = 22): number {
+  const k = Math.round((widthPx / modules) * 1.4)
+  const odd = k % 2 === 0 ? k + 1 : k
+  return Math.min(17, Math.max(3, odd))
+}
+
+/**
+ * 輪替器：每幀一個變體（核 × 極性）。
+ *
+ * - 有 `hintKernel`（上一幀定位框估出的核）：先試 hint 的兩種極性，再試 hint±2，之後才回到盲目輪替
+ * - 沒有 hint：依實測命中率順序輪替 `dottedKernels()` × {dark, light}
+ * - 成功就記住（sticky），連續失敗 6 幀才放掉
+ *
+ * 影片實測（PCB 遠拍、模組 2.6–3.8 px）：盲目輪替 0/448 幀命中；用 hint 後才有機會在正確級距命中。
  */
 export function createDottedCycler() {
   let index = 0
   let sticky: DottedVariant | null = null
   let stickyMisses = 0
+  let hintIndex = 0
+  let lastHint: number | null = null
 
   return {
-    next(width: number): DottedVariant {
+    next(width: number, hintKernel?: number): DottedVariant {
       if (sticky) return sticky
+      if (hintKernel !== undefined) {
+        if (hintKernel !== lastHint) {
+          lastHint = hintKernel
+          hintIndex = 0
+        }
+        const seq: DottedVariant[] = [
+          { kernel: hintKernel, polarity: 'dark' },
+          { kernel: hintKernel, polarity: 'light' },
+          { kernel: Math.max(3, hintKernel - 2), polarity: 'dark' },
+          { kernel: Math.min(17, hintKernel + 2), polarity: 'dark' },
+          { kernel: Math.max(3, hintKernel - 2), polarity: 'light' },
+          { kernel: Math.min(17, hintKernel + 2), polarity: 'light' },
+        ]
+        if (hintIndex < seq.length) return seq[hintIndex++]!
+        // hint 序列用完：回到盲目輪替（下面）
+      } else {
+        lastHint = null
+        hintIndex = 0
+      }
       const kernels = dottedKernels(width)
       const total = kernels.length * 2
       const i = index % total
@@ -196,6 +232,8 @@ export function createDottedCycler() {
       index = 0
       sticky = null
       stickyMisses = 0
+      hintIndex = 0
+      lastHint = null
     },
   }
 }

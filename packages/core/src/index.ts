@@ -17,7 +17,7 @@ export { getElementTransform, toElementSpace, rectToElementSpace, roiToImageRect
 export { probeSupport } from './support'
 
 // 點陣式（DPM）前處理，進階用途 / 除錯
-export { dilateDots, stretchContrast, rgbaToGray, grayToRgba, dottedKernels } from './decoder/morphology'
+export { dilateDots, stretchContrast, rgbaToGray, grayToRgba, dottedKernels, createDottedCycler, kernelFromSymbolWidth } from './decoder/morphology'
 export type { DottedVariant, DotPolarity } from './decoder/morphology'
 
 // 錯誤

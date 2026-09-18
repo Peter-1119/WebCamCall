@@ -7,7 +7,8 @@ import type { FrameMeta, FrameSource } from './camera/frame-source'
 import { createScaleController } from './camera/scale-controller'
 import type { ScaleController } from './camera/scale-controller'
 import { createDebouncer } from './decoder/debounce'
-import { createDottedCycler } from './decoder/morphology'
+import { createDottedCycler, kernelFromSymbolWidth } from './decoder/morphology'
+import { quadBounds } from './geometry'
 import type { DecoderPort } from './decoder/port'
 import { createDecoderPort, selectBackend } from './decoder/select'
 import { createEmitter } from './emitter'
@@ -48,6 +49,8 @@ export const createScanner: CreateScanner = (video, options = {}) => {
   let scale: ScaleController = createScaleController(opts.decodeScale, opts.roi)
   const dottedCycler = createDottedCycler()
   const dottedEnabled = () => (opts.dotted === 'auto' ? opts.formats.includes('data_matrix') : opts.dotted)
+  /** 上一幀定位到的候選寬度（影像座標 px），用來估膨脹核；沒有就盲目輪替。 */
+  let lastLocatedWidth: number | null = null
 
   let camera: OpenedCamera | null = null
   let backend: DecoderBackend | null = null
@@ -101,6 +104,7 @@ export const createScanner: CreateScanner = (video, options = {}) => {
     debouncer.reset()
     scale.reset()
     dottedCycler.reset()
+    lastLocatedWidth = null
   }
 
   async function fail(error: ScannerError) {
@@ -126,8 +130,11 @@ export const createScanner: CreateScanner = (video, options = {}) => {
     try {
       const frame = await grabber.grab(video, plan.crop, plan.targetWidth, meta.timestamp)
       frameId = frame.frameId
-      // 點陣式加強：每幀輪一個膨脹變體，核大小依解碼影像寬度縮放
-      dotted = dottedEnabled() && p.backend === 'wasm' ? dottedCycler.next(frame.bitmap.width) : null
+      // 點陣式加強：每幀一個膨脹變體。上一幀有定位框就用它的寬度估核（換算到解碼影像的像素），否則輪替
+      if (dottedEnabled() && p.backend === 'wasm') {
+        const hint = lastLocatedWidth !== null ? kernelFromSymbolWidth(lastLocatedWidth * frame.scale) : undefined
+        dotted = dottedCycler.next(frame.bitmap.width, hint)
+      }
       out = await p.decode(frame, { formats: opts.formats, multi: opts.multi, tryHarder: plan.level !== 'base', dotted })
       if (myGen !== generation) return
     } catch (err) {
@@ -157,6 +164,7 @@ export const createScanner: CreateScanner = (video, options = {}) => {
     if (results.length > 0) scale.report('decoded', imageSize)
     else if (located.length > 0) scale.report('located', imageSize, located[0])
     else scale.report('none', imageSize)
+    lastLocatedWidth = located.length > 0 ? quadBounds(located[0]!).width : results.length > 0 ? quadBounds(results[0]!.quad).width : null
 
     for (const quad of located) {
       emit({ type: 'candidate', candidate: { quad, imageSize, frameId, timestamp: meta.timestamp } })
