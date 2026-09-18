@@ -15,7 +15,7 @@
 pnpm add @cclemon/scanner-ui @cclemon/scanner-vue @cclemon/scanner-core
 ```
 
-> 需要 `@cclemon/scanner-core` **≥ 0.1.3**（wasm 檔內附；點陣式 Data Matrix 支援）；0.1.4 起套件內附完整手冊。`pnpm view @cclemon/scanner-core version` 確認。
+> 需要 `@cclemon/scanner-core` **≥ 0.1.5**（點陣式 Data Matrix 強化版；wasm 與完整手冊內附）。`pnpm view @cclemon/scanner-core version` 確認。
 >
 > **還在 0.1.1 的過渡做法**：`pnpm add zxing-wasm@3.1.4`，然後
 > `import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url'`（同一個檔案，之後換成下面那行即可）。

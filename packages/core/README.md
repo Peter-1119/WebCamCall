@@ -3,7 +3,7 @@
 # @cclemon/scanner 完整使用手冊
 
 > QUICKSTART 是「5 分鐘跑起來」；這份是「所有能調的東西、為什麼這樣設計、遇到問題怎麼查」。
-> 適用版本：`scanner-core ≥ 0.1.3`、`scanner-vue ≥ 0.1.1`、`scanner-ui ≥ 0.1.1`。
+> 適用版本：`scanner-core ≥ 0.1.5`、`scanner-vue ≥ 0.1.2`、`scanner-ui ≥ 0.1.2`。
 
 ---
 

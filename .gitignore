@@ -7,3 +7,4 @@ pics/
 public/zxing_reader.wasm
 release/
 examples/playground/public/dm-test/
+Command.bash
