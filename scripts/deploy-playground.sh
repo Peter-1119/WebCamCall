@@ -21,7 +21,8 @@ export MSYS2_ARG_CONV_EXCL="*"
 export PLAYGROUND_BASE="${PLAYGROUND_BASE:-/scanner/}"
 
 cd "$(dirname "$0")/.."
-echo "→ build (base=$PLAYGROUND_BASE)"
+echo "→ build packages + playground (base=$PLAYGROUND_BASE)"
+pnpm build                       # core / vue / ui 的 dist（playground 吃的是 dist）
 pnpm --filter playground build
 
 echo "→ upload to $DEPLOY_TARGET:$DEPLOY_PATH"
