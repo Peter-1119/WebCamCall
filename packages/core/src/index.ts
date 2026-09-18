@@ -34,6 +34,9 @@ export type { FrameSource, FrameMeta, FrameSourceStats } from './camera/frame-so
 export { createFrameGrabber } from './camera/frame-grabber'
 export type { FrameGrabber, GrabbedFrame } from './camera/frame-grabber'
 export { createScaleController } from './camera/scale-controller'
+// 進階：直接操作解碼器 port（自己餵幀、自訂請求）。一般用 createScanner / createDecoder 即可。
+export { createDecoderPort, selectBackend } from './decoder/select'
+export type { DecoderPort, DecodeRequest, DecodeOutput, DecodedSymbol } from './decoder/port'
 export type { ScaleController, FramePlan, DecodeOutcome } from './camera/scale-controller'
 
 export const VERSION = '0.0.0' as const

@@ -271,6 +271,7 @@ async function handleDecode(req: Extract<WorkerRequest, { type: 'decode' }>) {
       candidates = locateDotClusters(gray, image.width, image.height, req.locate, morphScratch)
       const inPlace = req.locate.inPlace
       if (inPlace && candidates.length) {
+        // 2.4 × window（遠拍符號的假設大小）。實測放大到 160 反而掉命中（裁進更多板面結構）；近的碼主幀本來就解得出
         const side = Math.round(2.4 * req.locate.window)
         const hit = await decodeCandidates(gray, image.width, image.height, candidates, side, inPlace.variants, options, performance.now() + inPlace.maxMs)
         if (hit) {
