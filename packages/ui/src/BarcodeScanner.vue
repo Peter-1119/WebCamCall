@@ -9,7 +9,7 @@
  * composable 的回傳透過 `defineExpose` 與 default slot 全部露出，需要進階控制時不用換元件。
  * 所有 overlay 的 slot（hint / status / error / actions）原樣轉發。
  */
-import { computed, proxyRefs, ref } from 'vue'
+import { computed, proxyRefs, ref, watch } from 'vue'
 import type { BackendPreference, BarcodeFormat, CameraOptions, DecodeScaleOptions, DecodedResult, ObjectFit, Roi, ScannerError, ScannerState, WasmOptions } from '@cclemon/scanner-core'
 import { useBarcodeScanner } from '@cclemon/scanner-vue'
 import ScannerOverlay from './ScannerOverlay.vue'
@@ -30,6 +30,12 @@ const props = withDefaults(
     multi?: boolean
     /** 點陣式（DPM）Data Matrix 前處理；`'auto'` = formats 含 data_matrix 時開啟。 */
     dotted?: boolean | 'auto'
+    /**
+     * 相機 zoom（相機一開好就套用，改變時也套用；會夾到 `capabilities.zoom` 的範圍）。
+     * 不支援 zoom 的相機靜默略過。遠拍小碼（PCB 2DID）用 2–3 讓每模組像素數翻倍，比任何演算法都有效。
+     * iPad 實測 zoom 1–10；是否為光學裁切需實機驗證。
+     */
+    zoom?: number
     /** 每秒發 `stats` 事件（透過 template ref 的 `scanner.on('stats')` 取得）。 */
     emitStats?: boolean
     autoStart?: boolean
@@ -92,6 +98,17 @@ const api = useBarcodeScanner(video, () => ({
 
 // slot 與 template ref 拿到的是 unwrap 過的值（state 是字串而不是 Ref），寫法與一般 props 一致
 const exposed = proxyRefs(api)
+
+// zoom prop：相機能力到了（或 prop 改了）就套用，夾在支援範圍內；不支援就不做
+watch(
+  [() => props.zoom, api.capabilities],
+  ([z, caps]) => {
+    if (z === undefined || !caps?.zoom) return
+    const v = Math.min(caps.zoom.max, Math.max(caps.zoom.min, z))
+    void api.setZoom(v).catch(() => {})
+  },
+  { immediate: true },
+)
 
 const videoStyle = computed(() => ({ objectFit: props.objectFit, transform: props.mirror ? 'scaleX(-1)' : undefined }))
 

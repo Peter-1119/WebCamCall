@@ -58,7 +58,13 @@ packages/
 - **點陣式 DM**：PCB 鑽孔碼 zxing 原生解不出；`dotted` 前處理 = 百分位對比拉伸 + van Herk min/max 膨脹，
   核 ≈ 1.3–1.5× 模組，**絕對值階梯** [5,3,9,7,13,17]×{dark,light}（不隨畫面縮放），成功後 sticky。
   拍照模式（createDecoder）多尺度 960/1280/640/1920 + 候選裁切 + Worker 內跑完所有變體，3 秒預算。
-  17 張 PCB 實拍：0.1.3 7/17 → 11/17；評測工具 `node scripts/eval-dm.mjs <dir>`（pics/ 不進 repo）。
+  17 張 PCB 實拍：0.1.3 7/17 → 14/17；評測工具 `node scripts/eval-dm.mjs <dir>`（pics/ 不進 repo）。
+  **2026-09-18 遠拍強化**（影片 448 幀、模組 3 px：3 → 69 幀，上限 ~100，其餘是打光 / 模糊）：
+  小裁切用 black-hat 去背景（`DottedVariant.hat`，**只能用在小裁切，整幀會毀掉近拍**）、
+  點密度定位（`locateDotClusters`，整幀沒候選時）、aux 追蹤裁切（與主幀同一請求、Worker 先解）。
+  全部只掛在 dotted 模式。研究筆記與待試清單 `docs/dpm-research.md`；逐幀工具 `scripts/dm-track.mjs`、
+  `scripts/dm-bench.mjs`、`scripts/sim-live.mjs`（鏡射 core 策略，改 core 要同步改它）。
+  **實機成本尚未量**（Node：aux ~13 ms、整幀變體 + 定位 90–120 ms）。
 - 狀態機轉移表是 `STATE_TRANSITIONS` 常數，`pause()`/`resume()` 非法狀態同步 throw，
   `start()`/`stop()` 冪等。多碼掃描逐碼發 `decoded`、以 `frameId` 分組。ROI 用比例。
 
