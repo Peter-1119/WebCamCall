@@ -125,9 +125,11 @@ export interface Decoder {
   readonly backend: DecoderBackend
   /**
    * @param source 任何可畫到 canvas 的來源。座標以該影像的原始尺寸為準。
+   * @param options.budgetMs 搜尋預算，預設 3000。單張圖片會做多尺度 + 候選裁切 + 點陣變體的完整搜尋
+   *   （即時掃描不做這些），一般印刷碼第一級就解出；到期後回傳目前結果，不會 reject。
    * @returns 找到的所有條碼（`multi: false` 時最多一個），找不到回傳空陣列，**不會 reject**。
    */
-  decode(source: ImageBitmapSource): Promise<readonly DecodedResult[]>
+  decode(source: ImageBitmapSource, options?: { readonly budgetMs?: number }): Promise<readonly DecodedResult[]>
   /** 釋放 Worker 與 WASM 資源。可重入。 */
   dispose(): Promise<void>
 }

@@ -77,7 +77,7 @@ import { QR_FORMATS, LINEAR_FORMATS } from '@cclemon/scanner-vue'
 
 PCB 鑽孔 / 雷刻的 **點陣式** Data Matrix（每個模組是圓點）zxing 原生解不出，
 core ≥ 0.1.3 在 `formats` 含 `data_matrix` 時會自動開啟前處理（`dotted: 'auto'`），
-每幀多花約 6–10 ms。實測 PCB 金面鑽孔碼：關閉 0/3 解出，開啟 3/3。
+每幀多花約 6–10 ms。實測 17 張 PCB 照片：拍照模式 11/17（遠拍碼太小的 6 張任何解碼器都不可能）。
 要對準：把碼放在框中央、鏡頭距離讓碼佔框寬 1/4 以上，等約半秒（會輪替幾種前處理參數）。
 
 ## 4. 自己排版：composable

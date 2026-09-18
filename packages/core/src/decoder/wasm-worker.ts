@@ -11,7 +11,7 @@
 import { prepareZXingModule, purgeZXingModule, readBarcodes } from 'zxing-wasm/reader'
 import type { ReaderOptions, ReadResult } from 'zxing-wasm/reader'
 import { dilateDots, grayToRgba, rgbaToGray } from './morphology'
-import type { MorphScratch } from './morphology'
+import type { DottedVariant, MorphScratch } from './morphology'
 import type { DecodeSource, RawResult, WorkerRequest, WorkerResponse } from './protocol'
 import { resolveWasmFile } from './protocol'
 
@@ -132,26 +132,34 @@ async function handleDecode(req: Extract<WorkerRequest, { type: 'decode' }>) {
       tryDownscale: false,
       // 要「找到位置但解不出」的結果，餵給候選放大
       returnErrors: true,
-      maxNumberOfSymbols: req.maxSymbols,
+      // 點陣模式下放寬候選數：PCB 上大量方形焊墊會搶走「第一個候選」
+      maxNumberOfSymbols: req.dotted ? Math.max(req.maxSymbols, 4) : req.maxSymbols,
     }
     const t0 = performance.now()
     let raw = await readBarcodes(image, options)
     let dottedHit = false
 
-    // 點陣式（DPM）第二次嘗試：正常解不出時，膨脹圓點成方塊再解一次
-    if (req.dotted && !raw.some((r) => r.isValid)) {
+    // 點陣式（DPM）第二次嘗試：正常解不出時，膨脹圓點成方塊再解。
+    // 可能有多個變體（拍照模式一次傳全部）：灰階只轉一次，逐一膨脹 → 解，成功即停。
+    let dottedVariant: DottedVariant | undefined
+    if (req.dotted?.length && !raw.some((r) => r.isValid)) {
       const n = image.width * image.height
       grayBuf = rgbaToGray(image.data, grayBuf && grayBuf.length === n ? grayBuf : undefined)
       if (!morphScratch || morphScratch.a.length !== n) morphScratch = { a: new Uint8Array(n), b: new Uint8Array(n) }
-      const dilated = dilateDots(grayBuf, image.width, image.height, req.dotted, morphScratch)
-      rgbaBuf = grayToRgba(dilated, rgbaBuf && rgbaBuf.length === n * 4 ? rgbaBuf : undefined)
-      // TS 5.9 的 ImageData 要求 ArrayBuffer-backed 陣列；我們的 buffer 就是，這裡只是型別收窄
-      const second = await readBarcodes(new ImageData(rgbaBuf as Uint8ClampedArray<ArrayBuffer>, image.width, image.height), options)
-      if (second.some((r) => r.isValid)) {
-        raw = second
-        dottedHit = true
-      } else if (raw.length === 0) {
-        raw = second // 至少把「有定位」的候選帶回去
+      for (const variant of req.dotted) {
+        if (req.maxMs !== undefined && performance.now() - t0 > req.maxMs) break
+        const dilated = dilateDots(grayBuf, image.width, image.height, variant, morphScratch)
+        rgbaBuf = grayToRgba(dilated, rgbaBuf && rgbaBuf.length === n * 4 ? rgbaBuf : undefined)
+        // TS 5.9 的 ImageData 要求 ArrayBuffer-backed 陣列；我們的 buffer 就是，這裡只是型別收窄
+        const second = await readBarcodes(new ImageData(rgbaBuf as Uint8ClampedArray<ArrayBuffer>, image.width, image.height), options)
+        if (second.some((r) => r.isValid)) {
+          raw = second
+          dottedHit = true
+          dottedVariant = variant
+          break
+        }
+        // 累積「有定位」的候選（去重交給主執行緒）
+        if (second.length) raw = raw.concat(second)
       }
     }
 
@@ -159,7 +167,7 @@ async function handleDecode(req: Extract<WorkerRequest, { type: 'decode' }>) {
     const results = raw.map(toRaw)
     const transfer: Transferable[] = []
     for (const r of results) if (r.bytes) transfer.push(r.bytes.buffer)
-    scope.postMessage({ type: 'result', id: req.id, results, decodeMs, dottedHit }, transfer)
+    scope.postMessage({ type: 'result', id: req.id, results, decodeMs, dottedHit, ...(dottedVariant ? { dottedVariant } : {}) }, transfer)
   } catch (err) {
     scope.postMessage({ type: 'decode-error', id: req.id, message: err instanceof Error ? err.message : String(err) })
   }

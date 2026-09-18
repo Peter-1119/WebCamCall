@@ -167,7 +167,8 @@ export async function createWasmDecoder(
           formats: toZxingFormats(request.formats),
           maxSymbols: request.multi ? 255 : 4,
           tryHarder: request.tryHarder,
-          ...(request.dotted ? { dotted: request.dotted } : {}),
+          ...(request.dotted ? { dotted: Array.isArray(request.dotted) ? request.dotted : [request.dotted] } : {}),
+          ...(request.maxMs !== undefined ? { maxMs: request.maxMs } : {}),
         },
         transfer,
       )
@@ -190,7 +191,7 @@ export async function createWasmDecoder(
       if (!format) continue
       results.push({ text: r.text, format, quad, rawBytes: r.bytes })
     }
-    return { results, located, decodeMs: response.decodeMs, dottedHit: response.dottedHit }
+    return { results, located, decodeMs: response.decodeMs, dottedHit: response.dottedHit, ...(response.dottedVariant ? { dottedVariant: response.dottedVariant } : {}) }
   }
 
   let disposed = false

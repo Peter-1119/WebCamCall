@@ -152,16 +152,14 @@ export function dilateDots(
 }
 
 /**
- * 依影像寬度產生膨脹核階梯：640 寬時 [5, 9, 13, 17]，依比例縮放並取奇數。
- * 實測核要約 **1.3–1.5 倍模組大小**才夠（點只佔模組一半，還得把相鄰模組連成 L 型定位線），
- * 四級大致對應模組 3–4 / 6–7 / 9–10 / 12–13 px。PCB 實拍 520 px 裁切（模組 ≈ 9 px）需要核 ≥ 13。
+ * 膨脹核階梯（**絕對值**，與影像寬度無關）。
+ *
+ * 核該跟「模組大小」走，不是跟畫面走：17 張 PCB 實拍評測顯示，遠拍時 1080 幀裡模組只有 3 px、
+ * 核 3–5 才對；原本依寬度縮放從 9 起跳會把碼糊掉（1080 幀 7/17 → 改絕對值後 12/17）。
+ * 順序依實測命中率排：5 與 3 最常中，再往大走。`width` 參數保留給未來需要時做上限，目前不使用。
  */
-export function dottedKernels(width: number): number[] {
-  const scale = width / 640
-  return [5, 9, 13, 17].map((k) => {
-    const v = Math.round(k * scale)
-    return Math.max(3, v % 2 === 0 ? v + 1 : v)
-  })
+export function dottedKernels(_width?: number): number[] {
+  return [5, 3, 9, 7, 13, 17]
 }
 
 /**

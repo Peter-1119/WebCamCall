@@ -39,8 +39,10 @@ export type WorkerRequest =
       readonly formats: readonly string[]
       readonly maxSymbols: number
       readonly tryHarder: boolean
-      /** 沒解出時用這個變體膨脹後再試一次。 */
-      readonly dotted?: DottedVariant
+      /** 沒解出時用這些變體膨脹後依序再試（即時掃描每幀傳一個；拍照模式一次傳全部，像素只讀回一次）。 */
+      readonly dotted?: readonly DottedVariant[]
+      /** 這次請求的時間上限（毫秒，Worker 內計時）：超過就不再試下一個變體。拍照模式用。 */
+      readonly maxMs?: number
     }
   | { readonly type: 'dispose' }
 
@@ -54,6 +56,7 @@ export type WorkerResponse =
       readonly decodeMs: number
       /** 結果來自膨脹後的第二次嘗試。 */
       readonly dottedHit: boolean
+      readonly dottedVariant?: DottedVariant
     }
   | { readonly type: 'decode-error'; readonly id: number; readonly message: string }
 

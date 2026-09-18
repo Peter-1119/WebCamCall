@@ -56,7 +56,9 @@ packages/
   的候選做全解析度局部裁切（zoomToCandidate）。Phase 2 負責裁切/縮放管線，
   Phase 3 負責回饋訊號。不可退化成固定降採樣。
 - **點陣式 DM**：PCB 鑽孔碼 zxing 原生解不出；`dotted` 前處理 = 百分位對比拉伸 + van Herk min/max 膨脹，
-  核 ≈ 1.3–1.5× 模組，每幀輪替 [5,9,13,17]×{dark,light}，成功後 sticky。以真實 PCB 照片驗證。
+  核 ≈ 1.3–1.5× 模組，**絕對值階梯** [5,3,9,7,13,17]×{dark,light}（不隨畫面縮放），成功後 sticky。
+  拍照模式（createDecoder）多尺度 960/1280/640/1920 + 候選裁切 + Worker 內跑完所有變體，3 秒預算。
+  17 張 PCB 實拍：0.1.3 7/17 → 11/17；評測工具 `node scripts/eval-dm.mjs <dir>`（pics/ 不進 repo）。
 - 狀態機轉移表是 `STATE_TRANSITIONS` 常數，`pause()`/`resume()` 非法狀態同步 throw，
   `start()`/`stop()` 冪等。多碼掃描逐碼發 `decoded`、以 `frameId` 分組。ROI 用比例。
 

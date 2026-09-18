@@ -17,6 +17,8 @@ export interface DecodeOutput {
   readonly decodeMs: number
   /** 結果是否來自點陣膨脹的第二次嘗試（給輪替器記住有效的核）。 */
   readonly dottedHit?: boolean
+  /** 命中的變體（`dottedHit` 為 true 時）。 */
+  readonly dottedVariant?: DottedVariant
 }
 
 export interface DecodedSymbol {
@@ -32,8 +34,10 @@ export interface DecodeRequest {
   readonly multi: boolean
   /** 階梯升級後才開 tryHarder，base 級保持快。 */
   readonly tryHarder: boolean
-  /** 本幀要嘗試的點陣膨脹變體；`null` 不做。只有 wasm 後端支援。 */
-  readonly dotted?: DottedVariant | null
+  /** 本幀要嘗試的點陣膨脹變體（依序試到成功為止）；`null` / 空陣列不做。只有 wasm 後端支援。 */
+  readonly dotted?: DottedVariant | readonly DottedVariant[] | null
+  /** 這次 decode 的時間上限（毫秒）；超過就不再試更多變體。拍照模式用。 */
+  readonly maxMs?: number
 }
 
 /**
