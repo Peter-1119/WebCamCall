@@ -8,8 +8,9 @@ import { createScaleController } from './camera/scale-controller'
 import type { ScaleController } from './camera/scale-controller'
 import { createDebouncer } from './decoder/debounce'
 import { createDottedCycler, kernelFromSymbolWidth } from './decoder/morphology'
+import type { DottedVariant } from './decoder/morphology'
 import { quadBounds } from './geometry'
-import type { DecoderPort } from './decoder/port'
+import type { DecoderPort, DecodeRequest } from './decoder/port'
 import { createDecoderPort, selectBackend } from './decoder/select'
 import { createEmitter } from './emitter'
 import { createScannerError, isScannerError } from './errors'
@@ -39,6 +40,29 @@ function percentile(sorted: number[], p: number): number {
  * 掃描器門面：把狀態機、相機、幀來源、裁切縮放、解碼器、debounce 接起來。
  * 各模組的細節見各自檔案；這裡只負責生命週期與事件。
  */
+/** 點陣模式：找到位置後，追蹤裁切連續幾幀沒解出才放掉。 */
+const DOTTED_TRACK_FRAMES = 10
+/** 點密度定位一幀最多給幾個候選。 */
+const DOTTED_LOCATE_K = 3
+/** 點密度定位假設的符號邊長（原始影像 px）：22 模組 × 3 px，遠拍的量級。 */
+const DOTTED_SYMBOL_PX = 66
+/** 裁切幀多變體嘗試的預算（毫秒）。160² 的裁切一個變體 < 5 ms。 */
+const DOTTED_CROP_BUDGET_MS = 40
+/** 整幀的縮放比至少這麼大，點密度候選才直接在 Worker 內裁切解碼（模組 ≥ ~2.3 px）。 */
+const DOTTED_INPLACE_MIN_SCALE = 0.75
+
+/**
+ * 裁切幀（zoom / track）要試的變體：帽濾波去背景 + 膨脹，核依預期符號寬度挑（沒有就假設遠拍小碼）。
+ * 影片實測（PCB 遠拍、模組 3 px）：oracle 裁切上帽濾波 4% → 20%，核 3 / 5 佔全部命中。
+ */
+function cropVariants(symbolWidth?: number): DottedVariant[] {
+  const k = symbolWidth !== undefined ? kernelFromSymbolWidth(symbolWidth) : 3
+  const kernels = [...new Set([k, Math.min(17, k + 2), Math.max(3, k - 2)])]
+  const out: DottedVariant[] = []
+  for (const kernel of kernels) for (const polarity of ['dark', 'light'] as const) out.push({ kernel, polarity, hat: kernel })
+  return out
+}
+
 export const createScanner: CreateScanner = (video, options = {}) => {
   let opts: ResolvedScannerOptions = resolveOptions(options)
   const emitter = createEmitter()
@@ -46,9 +70,11 @@ export const createScanner: CreateScanner = (video, options = {}) => {
   const sm = createStateMachine(emit)
   const grabber = createFrameGrabber()
   const debouncer = createDebouncer({ debounceFrames: opts.debounceFrames, rescanDelayMs: opts.rescanDelayMs })
-  let scale: ScaleController = createScaleController(opts.decodeScale, opts.roi)
-  const dottedCycler = createDottedCycler()
   const dottedEnabled = () => (opts.dotted === 'auto' ? opts.formats.includes('data_matrix') : opts.dotted)
+  // 點陣模式才開追蹤（交替出「追蹤裁切」幀）；一般 QR / 1D 的每幀流程完全不變
+  const makeScale = () => createScaleController(opts.decodeScale, opts.roi, dottedEnabled() ? DOTTED_TRACK_FRAMES : 0)
+  let scale: ScaleController = makeScale()
+  const dottedCycler = createDottedCycler()
   /** 上一幀定位到的候選寬度（影像座標 px），用來估膨脹核；沒有就盲目輪替。 */
   let lastLocatedWidth: number | null = null
 
@@ -128,14 +154,31 @@ export const createScanner: CreateScanner = (video, options = {}) => {
     let frameId: number
     let dotted: ReturnType<typeof dottedCycler.next> | null = null
     try {
-      const frame = await grabber.grab(video, plan.crop, plan.targetWidth, meta.timestamp)
+      const dottedWasm = dottedEnabled() && p.backend === 'wasm'
+      const frame = await grabber.grab(video, plan.crop, plan.targetWidth, meta.timestamp, dottedWasm ? plan.aux?.crop : undefined)
       frameId = frame.frameId
-      // 點陣式加強：每幀一個膨脹變體。上一幀有定位框就用它的寬度估核（換算到解碼影像的像素），否則輪替
-      if (dottedEnabled() && p.backend === 'wasm') {
-        const hint = lastLocatedWidth !== null ? kernelFromSymbolWidth(lastLocatedWidth * frame.scale) : undefined
-        dotted = dottedCycler.next(frame.bitmap.width, hint)
+      // 點陣式加強（只在 dotted 模式、wasm 後端）：
+      // - 追蹤裁切（aux，原尺寸小圖）：解碼器先解它，一組帽濾波變體；命中就不解主幀
+      // - 整幀：每幀一個膨脹變體（上一幀有定位框就用它的寬度估核，否則輪替）+ 沒結果時跑點密度定位
+      // - 候選放大幀（zoom，原尺寸小圖）：一次試一組帽濾波變體，小圖便宜
+      let request: DecodeRequest = { formats: opts.formats, multi: opts.multi, tryHarder: plan.level !== 'base' }
+      if (dottedWasm) {
+        if (plan.aux) request = { ...request, aux: { variants: cropVariants(plan.aux.symbolWidth), maxMs: DOTTED_CROP_BUDGET_MS } }
+        if (plan.level === 'zoom') {
+          request = { ...request, tryHarder: true, dotted: cropVariants(), maxMs: DOTTED_CROP_BUDGET_MS }
+        } else {
+          const hint = lastLocatedWidth !== null ? kernelFromSymbolWidth(lastLocatedWidth * frame.scale) : undefined
+          dotted = dottedCycler.next(frame.bitmap.width, hint)
+          // 解析度夠（≥ 0.75×原圖）就讓 Worker 直接在這張圖上裁候選再解，省掉下一幀；base 級太小，交下一幀裁原尺寸
+          const inPlace = frame.scale >= DOTTED_INPLACE_MIN_SCALE ? { variants: cropVariants(), maxMs: DOTTED_CROP_BUDGET_MS } : undefined
+          request = {
+            ...request,
+            dotted,
+            locate: { k: DOTTED_LOCATE_K, window: Math.max(24, Math.round(DOTTED_SYMBOL_PX * frame.scale)), ...(inPlace ? { inPlace } : {}) },
+          }
+        }
       }
-      out = await p.decode(frame, { formats: opts.formats, multi: opts.multi, tryHarder: plan.level !== 'base', dotted })
+      out = await p.decode(frame, request)
       if (myGen !== generation) return
     } catch (err) {
       if (myGen !== generation) return
@@ -161,9 +204,9 @@ export const createScanner: CreateScanner = (video, options = {}) => {
       located = l ? [l] : []
     }
 
-    if (results.length > 0) scale.report('decoded', imageSize)
-    else if (located.length > 0) scale.report('located', imageSize, located[0])
-    else scale.report('none', imageSize)
+    if (results.length > 0) scale.report('decoded', imageSize, results[0]!.quad, undefined, out.auxMiss)
+    else if (located.length > 0) scale.report('located', imageSize, located[0], undefined, out.auxMiss)
+    else scale.report('none', imageSize, undefined, out.candidates, out.auxMiss)
     lastLocatedWidth = located.length > 0 ? quadBounds(located[0]!).width : results.length > 0 ? quadBounds(results[0]!.quad).width : null
 
     for (const quad of located) {
@@ -391,8 +434,9 @@ export const createScanner: CreateScanner = (video, options = {}) => {
       }
       const roiChanged = next.roi !== opts.roi
       const scaleChanged = next.decodeScale !== opts.decodeScale
+      const dottedBefore = dottedEnabled()
       opts = next
-      if (roiChanged || scaleChanged) scale = createScaleController(opts.decodeScale, opts.roi)
+      if (roiChanged || scaleChanged || dottedEnabled() !== dottedBefore) scale = makeScale()
       debouncer.update({ debounceFrames: opts.debounceFrames, rescanDelayMs: opts.rescanDelayMs })
       source?.setTargetFps(opts.targetFps)
     },

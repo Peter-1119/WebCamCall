@@ -59,6 +59,7 @@ export async function createNativeDecoder(formats: readonly BarcodeFormat[]): Pr
       raw = []
     } finally {
       frame.bitmap.close()
+      frame.aux?.bitmap.close()
     }
     const results: DecodedSymbol[] = []
     for (const r of raw) {

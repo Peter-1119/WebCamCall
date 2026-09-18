@@ -11,6 +11,17 @@ export interface GrabbedFrame {
   readonly imageSize: Size
   readonly frameId: number
   readonly timestamp: number
+  /**
+   * 附加的小裁切（原尺寸，不縮）：點陣模式追蹤上一次位置用。解碼器先解這塊（便宜），命中就不用解主幀。
+   * 只有 wasm 後端會用；其他後端要負責 `close()`。
+   */
+  readonly aux?: AuxCrop
+}
+
+export interface AuxCrop {
+  readonly bitmap: ImageBitmap
+  readonly crop: Rect
+  readonly scale: number
 }
 
 type AnyCanvas = OffscreenCanvas | HTMLCanvasElement
@@ -32,22 +43,36 @@ type AnyCtx = OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D
  * 呼叫端用完 bitmap 要 `close()`（或 transfer 出去），否則 GPU 記憶體會累積。
  */
 export function createFrameGrabber() {
-  let canvas: AnyCanvas | null = null
-  let ctx: AnyCtx | null = null
+  // 主幀與附加裁切各一組 canvas（尺寸不同，共用會每幀重設 backing store）
+  const main = { canvas: null as AnyCanvas | null, ctx: null as AnyCtx | null }
+  const auxC = { canvas: null as AnyCanvas | null, ctx: null as AnyCtx | null }
   let frameId = 0
 
-  function ensureCanvas(w: number, h: number): AnyCtx {
-    if (!canvas) {
-      canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : document.createElement('canvas')
+  function ensureCanvas(slot: typeof main, w: number, h: number): AnyCtx {
+    if (!slot.canvas) {
+      slot.canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : document.createElement('canvas')
       // alpha: false 讓瀏覽器少一個 compositing 步驟；willReadFrequently 只對 HTMLCanvas 有意義但無害
-      ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false }) as AnyCtx | null
-      if (!ctx) throw new Error('2d context unavailable')
+      slot.ctx = slot.canvas.getContext('2d', { alpha: false, willReadFrequently: false }) as AnyCtx | null
+      if (!slot.ctx) throw new Error('2d context unavailable')
     }
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w
-      canvas.height = h
+    if (slot.canvas.width !== w || slot.canvas.height !== h) {
+      slot.canvas.width = w
+      slot.canvas.height = h
     }
-    return ctx!
+    return slot.ctx!
+  }
+
+  async function draw(slot: typeof main, video: HTMLVideoElement, crop: Rect, targetWidth: number) {
+    const scale = targetWidth > 0 && targetWidth < crop.width ? targetWidth / crop.width : 1
+    const dw = Math.max(1, Math.round(crop.width * scale))
+    const dh = Math.max(1, Math.round(crop.height * scale))
+    const c = ensureCanvas(slot, dw, dh)
+    c.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, dw, dh)
+    const bitmap =
+      'transferToImageBitmap' in slot.canvas!
+        ? (slot.canvas as OffscreenCanvas).transferToImageBitmap()
+        : await createImageBitmap(slot.canvas as HTMLCanvasElement)
+    return { bitmap, crop, scale: dw / crop.width }
   }
 
   async function grab(
@@ -55,28 +80,21 @@ export function createFrameGrabber() {
     crop: Rect,
     targetWidth: number,
     timestamp: number,
+    auxCrop?: Rect,
   ): Promise<GrabbedFrame> {
     const imageSize: Size = { width: video.videoWidth, height: video.videoHeight }
-    const scale = targetWidth > 0 && targetWidth < crop.width ? targetWidth / crop.width : 1
-    const dw = Math.max(1, Math.round(crop.width * scale))
-    const dh = Math.max(1, Math.round(crop.height * scale))
-
-    const c = ensureCanvas(dw, dh)
-    c.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, dw, dh)
-
-    const bitmap =
-      'transferToImageBitmap' in canvas!
-        ? (canvas as OffscreenCanvas).transferToImageBitmap()
-        : await createImageBitmap(canvas as HTMLCanvasElement)
-
-    return { bitmap, crop, scale: dw / crop.width, imageSize, frameId: frameId++, timestamp }
+    const m = await draw(main, video, crop, targetWidth)
+    const aux = auxCrop ? await draw(auxC, video, auxCrop, 0) : undefined
+    return { ...m, imageSize, frameId: frameId++, timestamp, ...(aux ? { aux } : {}) }
   }
 
   return {
     grab,
     dispose() {
-      canvas = null
-      ctx = null
+      main.canvas = null
+      main.ctx = null
+      auxC.canvas = null
+      auxC.ctx = null
     },
   }
 }

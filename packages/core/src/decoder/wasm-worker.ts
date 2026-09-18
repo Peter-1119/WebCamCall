@@ -10,8 +10,8 @@
  */
 import { prepareZXingModule, purgeZXingModule, readBarcodes } from 'zxing-wasm/reader'
 import type { ReaderOptions, ReadResult } from 'zxing-wasm/reader'
-import { dilateDots, grayToRgba, rgbaToGray } from './morphology'
-import type { DottedVariant, MorphScratch } from './morphology'
+import { dilateDots, grayToRgba, locateDotClusters, rgbaToGray } from './morphology'
+import type { DotCluster, DottedVariant, MorphScratch } from './morphology'
 import type { DecodeSource, RawResult, WorkerRequest, WorkerResponse } from './protocol'
 import { resolveWasmFile } from './protocol'
 
@@ -23,32 +23,37 @@ interface WorkerScope {
 }
 const scope = self as unknown as WorkerScope
 
-let canvas: OffscreenCanvas | null = null
-let ctx: OffscreenCanvasRenderingContext2D | null = null
+// 主幀與 aux 裁切各一組 canvas（尺寸不同，共用會每幀重設 backing store）
+interface CanvasSlot {
+  canvas: OffscreenCanvas | null
+  ctx: OffscreenCanvasRenderingContext2D | null
+}
+const mainSlot: CanvasSlot = { canvas: null, ctx: null }
+const auxSlot: CanvasSlot = { canvas: null, ctx: null }
 
 // 點陣膨脹用的重用 buffer（避免每幀配置）
 let grayBuf: Uint8Array | undefined
 let morphScratch: MorphScratch | undefined
 let rgbaBuf: Uint8ClampedArray | undefined
 
-function toImageData(source: DecodeSource): ImageData {
+function toImageData(source: DecodeSource, slot: CanvasSlot = mainSlot): ImageData {
   if (source.kind === 'pixels') {
     return new ImageData(new Uint8ClampedArray(source.data), source.width, source.height)
   }
   const { bitmap } = source
   const w = bitmap.width
   const h = bitmap.height
-  if (!canvas) {
-    canvas = new OffscreenCanvas(w, h)
-    ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true })
+  if (!slot.canvas) {
+    slot.canvas = new OffscreenCanvas(w, h)
+    slot.ctx = slot.canvas.getContext('2d', { alpha: false, willReadFrequently: true })
   }
-  if (canvas.width !== w || canvas.height !== h) {
-    canvas.width = w
-    canvas.height = h
+  if (slot.canvas.width !== w || slot.canvas.height !== h) {
+    slot.canvas.width = w
+    slot.canvas.height = h
   }
-  ctx!.drawImage(bitmap, 0, 0)
+  slot.ctx!.drawImage(bitmap, 0, 0)
   bitmap.close()
-  return ctx!.getImageData(0, 0, w, h)
+  return slot.ctx!.getImageData(0, 0, w, h)
 }
 
 function toRaw(r: ReadResult): RawResult {
@@ -120,9 +125,68 @@ async function handleInit(wasmUrl: string | undefined) {
   })
 }
 
+/** 候選裁切用的小 buffer（尺寸隨候選變，重用） */
+let cropGray: Uint8Array | undefined
+let cropScratch: MorphScratch | undefined
+let cropRgba: Uint8ClampedArray | undefined
+
+/**
+ * 對每個候選以 `side` 邊長從 `gray` 裁一塊，原圖 + 各變體依序解；命中就把座標加回裁切位移後回傳。
+ * 裁切很小（~160²），每個變體 < 5 ms；`deadline` 到就停。
+ */
+async function decodeCandidates(
+  gray: Uint8Array,
+  width: number,
+  height: number,
+  candidates: readonly DotCluster[],
+  side: number,
+  variants: readonly DottedVariant[],
+  options: ReaderOptions,
+  deadline: number,
+): Promise<{ results: ReadResult[]; variant?: DottedVariant } | null> {
+  const s = Math.min(side, width, height)
+  const n = s * s
+  if (!cropGray || cropGray.length !== n) {
+    cropGray = new Uint8Array(n)
+    cropScratch = { a: new Uint8Array(n), b: new Uint8Array(n) }
+    cropRgba = new Uint8ClampedArray(n * 4)
+  }
+  for (const c of candidates) {
+    const x0 = Math.min(Math.max(0, Math.round(c.cx - s / 2)), width - s)
+    const y0 = Math.min(Math.max(0, Math.round(c.cy - s / 2)), height - s)
+    for (let y = 0; y < s; y++) cropGray.set(gray.subarray((y0 + y) * width + x0, (y0 + y) * width + x0 + s), y * s)
+    const tryRead = async (g: Uint8Array) => {
+      const rgba = grayToRgba(g, cropRgba)
+      const res = await readBarcodes(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, s, s), options)
+      return res.filter((r) => r.isValid)
+    }
+    const offset = (r: ReadResult): ReadResult => ({
+      ...r,
+      position: {
+        topLeft: { x: r.position.topLeft.x + x0, y: r.position.topLeft.y + y0 },
+        topRight: { x: r.position.topRight.x + x0, y: r.position.topRight.y + y0 },
+        bottomRight: { x: r.position.bottomRight.x + x0, y: r.position.bottomRight.y + y0 },
+        bottomLeft: { x: r.position.bottomLeft.x + x0, y: r.position.bottomLeft.y + y0 },
+      },
+    })
+    let ok = await tryRead(cropGray)
+    if (ok.length) return { results: ok.map(offset) }
+    for (const variant of variants) {
+      if (performance.now() > deadline) return null
+      ok = await tryRead(dilateDots(cropGray, s, s, variant, cropScratch))
+      if (ok.length) return { results: ok.map(offset), variant }
+    }
+  }
+  return null
+}
+
+/** aux 裁切用的重用 buffer */
+let auxGray: Uint8Array | undefined
+let auxScratch: MorphScratch | undefined
+let auxRgba: Uint8ClampedArray | undefined
+
 async function handleDecode(req: Extract<WorkerRequest, { type: 'decode' }>) {
   try {
-    const image = toImageData(req.source)
     const options: ReaderOptions = {
       formats: [...req.formats] as NonNullable<ReaderOptions['formats']>,
       tryHarder: req.tryHarder,
@@ -136,8 +200,41 @@ async function handleDecode(req: Extract<WorkerRequest, { type: 'decode' }>) {
       maxNumberOfSymbols: req.dotted ? Math.max(req.maxSymbols, 4) : req.maxSymbols,
     }
     const t0 = performance.now()
+
+    // 追蹤裁切（aux）先解：很小（~160²），原圖 + 帽濾波變體，命中就不碰主幀（主幀 bitmap 仍要 close）
+    if (req.aux) {
+      const auxImage = toImageData(req.aux.source, auxSlot)
+      const n = auxImage.width * auxImage.height
+      auxGray = rgbaToGray(auxImage.data, auxGray && auxGray.length === n ? auxGray : undefined)
+      if (!auxScratch || auxScratch.a.length !== n) auxScratch = { a: new Uint8Array(n), b: new Uint8Array(n) }
+      const deadline = performance.now() + req.aux.maxMs
+      let hit = (await readBarcodes(auxImage, options)).filter((r) => r.isValid)
+      let variant: DottedVariant | undefined
+      if (!hit.length) {
+        for (const v of req.aux.variants) {
+          if (performance.now() > deadline) break
+          auxRgba = grayToRgba(dilateDots(auxGray, auxImage.width, auxImage.height, v, auxScratch), auxRgba && auxRgba.length === n * 4 ? auxRgba : undefined)
+          hit = (await readBarcodes(new ImageData(auxRgba as Uint8ClampedArray<ArrayBuffer>, auxImage.width, auxImage.height), options)).filter((r) => r.isValid)
+          if (hit.length) {
+            variant = v
+            break
+          }
+        }
+      }
+      if (hit.length) {
+        if (req.source.kind === 'bitmap') req.source.bitmap.close()
+        const results = hit.map(toRaw)
+        const transfer: Transferable[] = []
+        for (const r of results) if (r.bytes) transfer.push(r.bytes.buffer)
+        scope.postMessage({ type: 'result', id: req.id, results, decodeMs: performance.now() - t0, dottedHit: !!variant, ...(variant ? { dottedVariant: variant } : {}), fromAux: true }, transfer)
+        return
+      }
+    }
+
+    const image = toImageData(req.source)
     let raw = await readBarcodes(image, options)
     let dottedHit = false
+    let grayFresh = false
 
     // 點陣式（DPM）第二次嘗試：正常解不出時，膨脹圓點成方塊再解。
     // 可能有多個變體（拍照模式一次傳全部）：灰階只轉一次，逐一膨脹 → 解，成功即停。
@@ -145,6 +242,7 @@ async function handleDecode(req: Extract<WorkerRequest, { type: 'decode' }>) {
     if (req.dotted?.length && !raw.some((r) => r.isValid)) {
       const n = image.width * image.height
       grayBuf = rgbaToGray(image.data, grayBuf && grayBuf.length === n ? grayBuf : undefined)
+      grayFresh = true
       if (!morphScratch || morphScratch.a.length !== n) morphScratch = { a: new Uint8Array(n), b: new Uint8Array(n) }
       for (const variant of req.dotted) {
         if (req.maxMs !== undefined && performance.now() - t0 > req.maxMs) break
@@ -163,11 +261,45 @@ async function handleDecode(req: Extract<WorkerRequest, { type: 'decode' }>) {
       }
     }
 
+    // 點密度定位：整幀完全沒結果（連候選都沒有）時，找「擠滿小點」的區域。
+    // 解析度夠（inPlace）就直接在這張影像上裁候選、多變體再解；否則交給主執行緒下一幀裁原尺寸。
+    let candidates: DotCluster[] | undefined
+    if (req.locate && raw.length === 0) {
+      const n = image.width * image.height
+      const gray = grayFresh && grayBuf ? grayBuf : (grayBuf = rgbaToGray(image.data, grayBuf && grayBuf.length === n ? grayBuf : undefined))
+      if (!morphScratch || morphScratch.a.length !== n) morphScratch = { a: new Uint8Array(n), b: new Uint8Array(n) }
+      candidates = locateDotClusters(gray, image.width, image.height, req.locate, morphScratch)
+      const inPlace = req.locate.inPlace
+      if (inPlace && candidates.length) {
+        const side = Math.round(2.4 * req.locate.window)
+        const hit = await decodeCandidates(gray, image.width, image.height, candidates, side, inPlace.variants, options, performance.now() + inPlace.maxMs)
+        if (hit) {
+          raw = hit.results
+          dottedHit = true
+          dottedVariant = hit.variant
+        }
+        // 已經在這張圖上試過了：失敗的候選不再交給下一幀裁原尺寸（解析度差不多，幾乎不會翻盤，只會吃掉發現幀）
+        candidates = undefined
+      }
+    }
+
     const decodeMs = performance.now() - t0
     const results = raw.map(toRaw)
     const transfer: Transferable[] = []
     for (const r of results) if (r.bytes) transfer.push(r.bytes.buffer)
-    scope.postMessage({ type: 'result', id: req.id, results, decodeMs, dottedHit, ...(dottedVariant ? { dottedVariant } : {}) }, transfer)
+    scope.postMessage(
+      {
+        type: 'result',
+        id: req.id,
+        results,
+        decodeMs,
+        dottedHit,
+        ...(dottedVariant ? { dottedVariant } : {}),
+        ...(candidates ? { candidates } : {}),
+        ...(req.aux ? { auxMiss: true } : {}),
+      },
+      transfer,
+    )
   } catch (err) {
     scope.postMessage({ type: 'decode-error', id: req.id, message: err instanceof Error ? err.message : String(err) })
   }
@@ -183,8 +315,8 @@ scope.onmessage = (event) => {
       void handleDecode(msg)
       break
     case 'dispose':
-      canvas = null
-      ctx = null
+      mainSlot.canvas = mainSlot.ctx = null
+      auxSlot.canvas = auxSlot.ctx = null
       scope.close()
       break
   }

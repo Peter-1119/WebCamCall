@@ -10,7 +10,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { prepareZXingModule as prepareReader, readBarcodes } from 'zxing-wasm/reader'
 import { prepareZXingModule as prepareWriter, writeBarcode } from 'zxing-wasm/writer'
 import type { ReaderOptions } from 'zxing-wasm/reader'
-import { createDottedCycler, dilateDots, dottedKernels, grayToRgba, rgbaToGray } from './morphology'
+import { createDottedCycler, dilateDots, dottedKernels, grayToRgba, hatFilter, locateDotClusters, rgbaToGray } from './morphology'
 
 const require = createRequire(import.meta.url)
 const TEXT = '4260708009502'
@@ -143,5 +143,54 @@ describe('dotted Data Matrix (DPM)', () => {
     // 絕對值，與寬度無關
     expect(dottedKernels(640)).toEqual([5, 3, 9, 7, 13, 17])
     expect(dottedKernels(3024)).toEqual([5, 3, 9, 7, 13, 17])
+  })
+
+  it('hat filter removes a slow illumination gradient so a low-contrast dotted code decodes', async () => {
+    // 模組 6 px、點 55%：對比只有 40 階，再疊一個左暗右亮的斜坡（像銅面反光）
+    const { gray, size } = renderDotted(matrix, 6, 0.55, 'dark')
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const v = gray[y * size + x]! === 30 ? 120 : 160
+      gray[y * size + x] = Math.min(255, v + Math.round((x / size) * 90))
+    }
+    const plain: string[] = []
+    const hatted: string[] = []
+    for (const kernel of [5, 7, 9]) {
+      const a = await decodeGray(dilateDots(gray, size, size, { kernel, polarity: 'dark' }), size)
+      const b = await decodeGray(dilateDots(gray, size, size, { kernel, polarity: 'dark', hat: kernel }), size)
+      if (a) plain.push(`${kernel}`)
+      if (b) hatted.push(`${kernel}`)
+    }
+    expect(hatted.length).toBeGreaterThanOrEqual(plain.length)
+    expect(hatted).toContain('7')
+    // hatFilter 本身：輸出仍是「點為暗」，且背景（無點處）被抬到接近 255
+    const s = { a: new Uint8Array(size * size), b: new Uint8Array(size * size) }
+    s.a.set(gray)
+    hatFilter(s.a, size, size, 5, 'dark', s)
+    expect(s.a[0]).toBeGreaterThan(200)
+  })
+
+  it('locateDotClusters finds the dotted symbol inside a larger textured frame', () => {
+    // 3 px 模組的小碼（影片遠拍的量級）貼在 640×480 的雜訊背景上
+    const { gray: sym, size } = renderDotted(matrix, 3, 0.6, 'dark', 2)
+    const W = 640
+    const H = 480
+    const frame = new Uint8Array(W * H)
+    let seed = 7
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+    for (let i = 0; i < frame.length; i++) frame[i] = 150 + Math.round(rnd() * 40)
+    const ox = 400
+    const oy = 300
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) frame[(oy + y) * W + ox + x] = sym[y * size + x]!
+    const window = matrix.length * 3
+    const found = locateDotClusters(frame, W, H, { k: 3, window })
+    expect(found.length).toBeGreaterThan(0)
+    const best = found[0]!
+    expect(Math.abs(best.cx - (ox + size / 2))).toBeLessThan(window)
+    expect(Math.abs(best.cy - (oy + size / 2))).toBeLessThan(window)
+    // 沒有碼的畫面：最高分要遠低於有碼時
+    const empty = new Uint8Array(W * H)
+    for (let i = 0; i < empty.length; i++) empty[i] = 150 + Math.round(rnd() * 40)
+    const none = locateDotClusters(empty, W, H, { k: 1, window })
+    expect(none[0]?.score ?? 0).toBeLessThan(best.score / 2)
   })
 })

@@ -28,6 +28,8 @@ const kernelsOverride = opt('kernels', null)?.split(',').map(Number)
 const formats = opt('formats', 'DataMatrix').split(',')
 const maxSymbols = Number(opt('max', '4'))
 const ladder = opt('ladder', '640,960,1280,0').split(',').map(Number)
+const hatWhole = opt('hat', '0') === 'k' ? 'k' : Number(opt('hat', '0')) // 整張圖變體的帽半徑（0 = 關）
+const hatZoom = opt('hat-zoom', '0') === 'k' ? 'k' : Number(opt('hat-zoom', '0')) // 候選裁切變體的帽半徑（0 = 關）
 
 await prepareZXingModule({ overrides: { wasmBinary: readFileSync(coreRequire.resolve('zxing-wasm/reader/zxing_reader.wasm')) }, fireImmediately: true })
 
@@ -82,14 +84,14 @@ function bbox(r) {
 /**
  * 對一張灰階圖跑「原圖 → 膨脹階梯」；回傳第一個成功的標籤與結果。
  */
-async function decodeWithDotted(gray, w, h, tryHarder, kernels) {
+async function decodeWithDotted(gray, w, h, tryHarder, kernels, hat = 0) {
   let r = await decodeGray(gray, w, h, tryHarder)
   if (r.ok.length) return { label: 'raw', r }
   const located = r.located
   const scratch = { a: new Uint8Array(w * h), b: new Uint8Array(w * h) }
   for (const polarity of ['dark', 'light']) {
     for (const kernel of kernels) {
-      const d = dilateDots(gray, w, h, { kernel, polarity }, scratch)
+      const d = dilateDots(gray, w, h, hat ? { kernel, polarity, hat: hat === 'k' ? kernel : hat } : { kernel, polarity }, scratch)
       r = await decodeGray(d, w, h, tryHarder)
       if (r.ok.length) return { label: `${polarity[0]}${kernel}`, r }
       if (r.located.length) located.push(...r.located)
@@ -112,7 +114,7 @@ for (const f of files) {
   for (const width of ladder) {
     const level = resizeGray(fullGray, img.width, img.height, width || img.width)
     const kernels = kernelsOverride ?? dottedKernels(level.w)
-    const first = await decodeWithDotted(level.gray, level.w, level.h, width !== 640, kernels)
+    const first = await decodeWithDotted(level.gray, level.w, level.h, width !== 640, kernels, hatWhole)
     if (first.label) {
       const b = bbox(first.r.ok[0])
       hit = { where: `level${width || 'full'}:${first.label}`, text: first.r.ok[0].text, module: (b.width / 22 / level.scale).toFixed(1), at: `${Math.round(b.x / level.scale)},${Math.round(b.y / level.scale)},${Math.round(b.width / level.scale)}` }
@@ -134,7 +136,7 @@ for (const f of files) {
       const crop = cropGray(fullGray, img.width, img.height, { x: fx - pad, y: fy - pad, width: fw + pad * 2, height: fh + pad * 2 })
       if (crop.w < 40 || crop.h < 40 || crop.w > 2000) continue
       const ck = kernelsOverride ?? dottedKernels(crop.w)
-      const z = await decodeWithDotted(crop.gray, crop.w, crop.h, true, ck)
+      const z = await decodeWithDotted(crop.gray, crop.w, crop.h, true, ck, hatZoom)
       log.push(`  zoom@level${width || 'full'} cand(${Math.round(fx)},${Math.round(fy)} ${Math.round(fw)}px) crop ${crop.w}x${crop.h} kernels [${ck}] → ${z.label ?? 'x'}`)
       if (z.label) {
         const zb = bbox(z.r.ok[0])

@@ -1,8 +1,9 @@
 import type { GrabbedFrame } from '../camera/frame-grabber'
 import { createDecoderError } from '../errors'
 import { toImageSpace } from '../geometry'
-import type { Quad, WasmOptions } from '../types'
+import type { Quad, Rect, WasmOptions } from '../types'
 import { fromZxingFormat, toZxingFormats } from './format-map'
+import type { DottedVariant } from './morphology'
 import type { DecodedSymbol, DecodeOutput, DecoderPort, DecodeRequest } from './port'
 import type { DecodeSource, RawResult, WorkerRequest, WorkerResponse } from './protocol'
 
@@ -42,7 +43,7 @@ function defaultCreateWorker(): WorkerLike {
   return new Worker(url, { type: 'module' }) as unknown as WorkerLike
 }
 
-function rawToQuad(r: RawResult, frame: GrabbedFrame): Quad<'image'> {
+function rawToQuad(r: RawResult, frame: { readonly crop: Rect; readonly scale: number }): Quad<'image'> {
   const q: Quad<'image'> = [r.topLeft, r.topRight, r.bottomRight, r.bottomLeft]
   return toImageSpace(q, frame.crop, frame.scale)
 }
@@ -152,6 +153,14 @@ export async function createWasmDecoder(
     const id = nextId++
     const source: DecodeSource = readPixels ? readPixels(frame.bitmap) : { kind: 'bitmap', bitmap: frame.bitmap }
     const transfer: Transferable[] = source.kind === 'bitmap' ? [source.bitmap] : [source.data]
+    let aux: { source: DecodeSource; variants: readonly DottedVariant[]; maxMs: number } | undefined
+    if (frame.aux) {
+      if (request.aux) {
+        const auxSource: DecodeSource = readPixels ? readPixels(frame.aux.bitmap) : { kind: 'bitmap', bitmap: frame.aux.bitmap }
+        transfer.push(auxSource.kind === 'bitmap' ? auxSource.bitmap : auxSource.data)
+        aux = { source: auxSource, variants: request.aux.variants, maxMs: request.aux.maxMs }
+      } else frame.aux.bitmap.close()
+    }
 
     const response = await new Promise<WorkerResponse>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -169,6 +178,8 @@ export async function createWasmDecoder(
           tryHarder: request.tryHarder,
           ...(request.dotted ? { dotted: Array.isArray(request.dotted) ? request.dotted : [request.dotted] } : {}),
           ...(request.maxMs !== undefined ? { maxMs: request.maxMs } : {}),
+          ...(request.locate ? { locate: request.locate } : {}),
+          ...(aux ? { aux } : {}),
         },
         transfer,
       )
@@ -181,8 +192,10 @@ export async function createWasmDecoder(
 
     const results: DecodedSymbol[] = []
     const located: Quad<'image'>[] = []
+    // aux 的結果用 aux 的 crop / scale 換算
+    const space = response.fromAux && frame.aux ? frame.aux : frame
     for (const r of response.results) {
-      const quad = rawToQuad(r, frame)
+      const quad = rawToQuad(r, space)
       if (!r.isValid) {
         located.push(quad)
         continue
@@ -191,7 +204,27 @@ export async function createWasmDecoder(
       if (!format) continue
       results.push({ text: r.text, format, quad, rawBytes: r.bytes })
     }
-    return { results, located, decodeMs: response.decodeMs, dottedHit: response.dottedHit, ...(response.dottedVariant ? { dottedVariant: response.dottedVariant } : {}) }
+    // 點密度候選：解碼影像座標 → 原始影像座標（正方形，邊長 2.4 × window）
+    let candidates: Rect[] | undefined
+    if (response.candidates && request.locate) {
+      const side = (2.4 * request.locate.window) / frame.scale
+      candidates = response.candidates.map((c) => ({
+        x: frame.crop.x + c.cx / frame.scale - side / 2,
+        y: frame.crop.y + c.cy / frame.scale - side / 2,
+        width: side,
+        height: side,
+      }))
+    }
+    return {
+      results,
+      located,
+      decodeMs: response.decodeMs,
+      dottedHit: response.dottedHit,
+      ...(response.dottedVariant ? { dottedVariant: response.dottedVariant } : {}),
+      ...(candidates ? { candidates } : {}),
+      ...(response.fromAux ? { fromAux: true } : {}),
+      ...(response.auxMiss ? { auxMiss: true } : {}),
+    }
   }
 
   let disposed = false

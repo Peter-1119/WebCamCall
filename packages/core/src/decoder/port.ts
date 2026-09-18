@@ -1,5 +1,5 @@
 import type { GrabbedFrame } from '../camera/frame-grabber'
-import type { BarcodeFormat, DecoderBackend, Quad } from '../types'
+import type { BarcodeFormat, DecoderBackend, Quad, Rect } from '../types'
 import type { DottedVariant } from './morphology'
 
 /**
@@ -19,6 +19,12 @@ export interface DecodeOutput {
   readonly dottedHit?: boolean
   /** 命中的變體（`dottedHit` 為 true 時）。 */
   readonly dottedVariant?: DottedVariant
+  /** 點密度定位的候選區域（原始影像座標）；只有 `DecodeRequest.locate` 且整幀沒結果時才有。 */
+  readonly candidates?: readonly Rect[]
+  /** 結果來自 `frame.aux`（追蹤裁切）。 */
+  readonly fromAux?: boolean
+  /** 有 `frame.aux` 但沒在裡面解出。 */
+  readonly auxMiss?: boolean
 }
 
 export interface DecodedSymbol {
@@ -38,6 +44,18 @@ export interface DecodeRequest {
   readonly dotted?: DottedVariant | readonly DottedVariant[] | null
   /** 這次 decode 的時間上限（毫秒）；超過就不再試更多變體。拍照模式用。 */
   readonly maxMs?: number
+  /**
+   * 整幀沒結果時跑點密度定位，`window` 是符號邊長估計（解碼影像 px）。
+   * 回傳的候選是以 `cx, cy` 為中心、邊長 `2.4 × window` 的正方形（換回原始影像座標）。只有 wasm 後端支援。
+   */
+  readonly locate?: {
+    readonly k: number
+    readonly window: number
+    /** 影像解析度夠時直接在 Worker 內裁候選再解（見 protocol.ts）。 */
+    readonly inPlace?: { readonly variants: readonly DottedVariant[]; readonly maxMs: number }
+  }
+  /** `frame.aux` 要用的變體與預算；沒給就不解 aux（但仍會 close 它）。只有 wasm 後端支援。 */
+  readonly aux?: { readonly variants: readonly DottedVariant[]; readonly maxMs: number }
 }
 
 /**

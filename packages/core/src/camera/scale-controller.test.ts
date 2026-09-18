@@ -80,4 +80,47 @@ describe('scale controller', () => {
     for (let i = 0; i < 20; i++) sc.report('none', image)
     expect(sc.level).toBe(0)
   })
+
+  it('candidates from dot-cluster locating are queued as zoom crops (max 3)', () => {
+    const sc = createScaleController(opts, null)
+    const cands = [1, 2, 3, 4].map((i) => ({ x: i * 100, y: 100, width: 160, height: 160 }))
+    sc.report('none', image, undefined, cands)
+    const levels = [sc.plan(image), sc.plan(image), sc.plan(image), sc.plan(image)].map((p) => p.level)
+    expect(levels).toEqual(['zoom', 'zoom', 'zoom', 'base'])
+  })
+
+  it('tracking: after a hit every plan carries an aux crop around it until N aux misses', () => {
+    const sc = createScaleController(opts, null, 2)
+    expect(sc.plan(image).aux).toBeUndefined()
+    sc.report('decoded', image, rectToQuad({ x: 900, y: 500, width: 60, height: 60 }))
+    const p = sc.plan(image)
+    expect(sc.tracking).toBe(true)
+    expect(p.level).toBe('base') // 主幀照常走階梯
+    expect(p.aux).toBeDefined()
+    expect(p.aux!.symbolWidth).toBe(60)
+    // 至少 160 px、置中、在畫面內
+    expect(p.aux!.crop.width).toBe(160)
+    expect(p.aux!.crop.x).toBe(850)
+    expect(p.aux!.crop.y).toBe(450)
+    sc.report('none', image, undefined, undefined, true)
+    expect(sc.tracking).toBe(true)
+    sc.report('none', image, undefined, undefined, true)
+    expect(sc.tracking).toBe(false)
+    expect(sc.plan(image).aux).toBeUndefined()
+  })
+
+  it('tracking is off when trackFrames is 0 (default: non-dotted scanning is unchanged)', () => {
+    const sc = createScaleController(opts, null)
+    sc.report('decoded', image, rectToQuad({ x: 900, y: 500, width: 60, height: 60 }))
+    expect(sc.tracking).toBe(false)
+    expect(sc.plan(image).aux).toBeUndefined()
+  })
+
+  it('aux crop is clamped inside the roi', () => {
+    const sc = createScaleController(opts, { x: 0.5, y: 0.5, width: 0.5, height: 0.5 }, 5)
+    sc.report('located', image, rectToQuad({ x: 1880, y: 1040, width: 30, height: 30 }))
+    const aux = sc.plan(image).aux!
+    expect(aux.crop.x + aux.crop.width).toBeLessThanOrEqual(1920)
+    expect(aux.crop.y + aux.crop.height).toBeLessThanOrEqual(1080)
+  })
 })
