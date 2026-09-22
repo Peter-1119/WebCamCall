@@ -39,4 +39,9 @@ export { createDecoderPort, selectBackend } from './decoder/select'
 export type { DecoderPort, DecodeRequest, DecodeOutput, DecodedSymbol } from './decoder/port'
 export type { ScaleController, FramePlan, DecodeOutcome } from './camera/scale-controller'
 
-export const VERSION = '0.0.0' as const
+declare const __CORE_VERSION__: string
+/**
+ * 這份 core 的版本（build 時從 package.json 編進來）。
+ * 用它確認瀏覽器**真正在跑**的版本——package.json / lockfile 只說明裝了什麼，bundler 快取或部署快取可能讓瀏覽器跑到舊版。
+ */
+export const VERSION: string = typeof __CORE_VERSION__ === 'string' ? __CORE_VERSION__ : '0.0.0-dev'

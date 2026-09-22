@@ -1,4 +1,9 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'tsup'
+
+// 把 package.json 的版本編進 dist：App 印 `VERSION` 就知道瀏覽器**真正在跑**哪一版（不是 package.json 裝了哪一版）
+const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version as string
+const define = { __CORE_VERSION__: JSON.stringify(version) }
 
 export default defineConfig([
   {
@@ -12,6 +17,7 @@ export default defineConfig([
     target: 'es2022',
     treeshake: true,
     splitting: false,
+    define,
     // 不用 shims：tsup 的 shim 會把 Node 的 path/url 塞進 ESM 輸出，瀏覽器載入會失敗。
     // CJS 輸出沒有 import.meta.url，wasm 路徑需要呼叫端提供 wasm.createWorker（見 wasm.ts）。
   },
@@ -26,5 +32,6 @@ export default defineConfig([
     platform: 'browser',
     noExternal: ['zxing-wasm'],
     treeshake: true,
+    define,
   },
 ])

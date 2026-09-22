@@ -813,11 +813,15 @@ console.log(await probeSupport())
 scanner.subscribe((e) => console.log(e.type, e))
 ```
 
-### 版本
+### 版本：確認瀏覽器真正在跑哪一版
 
 ```js
 import { VERSION } from '@cclemon/scanner-core'
+console.log('[scanner] core', VERSION)   // build 時從 package.json 編進 dist，例如 "0.2.1"
 ```
+
+`package.json` / `npm ls` 只說明**裝了**什麼；bundler 的預打包快取（Vite `node_modules/.vite`）或部署端的 HTML 快取都可能讓瀏覽器跑到舊版。
+掃描行為跟預期不符時，第一件事是印 `VERSION`。（0.2.0 之前這個常數固定是 `'0.0.0'`，沒有參考價值。）
 
 ---
 
