@@ -67,6 +67,12 @@ pnpm add @cclemon/scanner-ui @cclemon/scanner-vue @cclemon/scanner-core
 2. 與 worker 檔同目錄的 `zxing_reader.wasm`——webpack、Vite **dev** 模式自動成立
 3. jsDelivr CDN——**需要外網**，內網會失敗（`decoder-init-failed`），console 有 `[scanner] ... fell back to CDN` 警告
 
+**解碼 Worker（`wasm-worker.js`）的位置**是另一回事：預設找與 core dist 同目錄的檔案。
+Vite **dev** 模式若把 core pre-bundle 進 `node_modules/.vite/deps/`，這個路徑會 404；
+core ≥ 0.2.2 會自動退回套件真正的 dist 路徑（console 警告），但正解是在 `vite.config` 加
+`optimizeDeps: { exclude: ['@cclemon/scanner-core', '@cclemon/scanner-vue', '@cclemon/scanner-ui'] }`（改完 `npx vite --force`）。
+也可以用 `wasm.workerUrl` 明確指定。production build 不受影響。
+
 **Vite 專案 production build 不會替 node_modules 裡的檔案產生資源**，所以請一定傳：
 
 ```js
@@ -411,8 +417,8 @@ idle ─start()─▶ requesting-permission ─▶ starting ─▶ scanning ⇄ 
 | `constraints-unsatisfiable` | ✓ | deviceId 失效等（core 已自動退階三次仍失敗） | 重試或換鏡頭 |
 | `camera-failed` | ✓ | 其他 gUM 錯誤；stream 開了但 6 秒等不到首幀 | 重試 |
 | `track-ended` | ✓ | 相機被系統收走且自動恢復失敗 | 重試 |
-| `decoder-init-failed` | 視情況 | wasm 下載失敗（沒設 wasmUrl、內網、路徑錯） | 檢查 wasm URL；message 會列出嘗試過的位置 |
-| `decoder-crashed` | ✓ | Worker 死掉 / 5 秒無回應 | 重試（會重建） |
+| `decoder-init-failed` | 視情況 | wasm 下載失敗（沒設 wasmUrl、內網、路徑錯），或**解碼 Worker 檔載不起來**（404、MIME 不對；Vite dev 沒加 `optimizeDeps.exclude` 最常見） | 看 `error.cause`：會列出嘗試過的位置與修法 |
+| `decoder-crashed` | ✓ | Worker **跑起來之後**死掉 / 5 秒無回應 | 重試（會重建）|
 | `unsupported-backend` | ✗ | 強制 native 但不可用 | 改 auto |
 | `unsupported-format` | ✗ | 格式在該後端不支援（`error.formats` 列出） | 改 formats 或 backend |
 | `capability-unsupported` | ✗ | `setTorch/setZoom` 但 track 不支援（`error.capability`） | 先看 `capabilities` |
@@ -795,7 +801,7 @@ console.log(await probeSupport())
 | 症狀 | 最可能原因 | 查法 |
 |---|---|---|
 | state 停在 `requesting-permission` | 瀏覽器正在問權限；iOS 上不是手勢觸發 | 看瀏覽器有沒有權限泡泡 |
-| `decoder-init-failed` | wasm URL 不對 / 內網沒外網 | `error.message` 列出嘗試過的位置；Network 面板看 `.wasm` 是否 200 |
+| `decoder-init-failed` | wasm URL 不對 / 內網沒外網 / Worker 檔 404（Vite dev） | `error.cause` 列出嘗試過的位置；Network 面板看 `.wasm` 與 `wasm-worker.js` 是否 200 |
 | `camera-failed`（timeout） | video 6 秒沒幀：iOS PWA、或分頁被遮住 | 換一般 Safari 分頁試 |
 | 掃 QR 可以、條碼不行 | `formats` 沒含一維 | 檢查 formats |
 | Data Matrix 有黃框解不出 | 點陣式碼、或 formats 沒含 `data_matrix`、或 core < 0.1.3 | 升級 + 加格式；靠近一點 |

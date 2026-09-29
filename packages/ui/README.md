@@ -52,6 +52,9 @@ const errorText = { 'permission-denied': '請允許相機權限', 'no-camera': '
 </template>
 ```
 
+- **Vite dev 模式要在 `vite.config.js` 加 `optimizeDeps: { exclude: ['@cclemon/scanner-core', '@cclemon/scanner-vue', '@cclemon/scanner-ui'] }`**，
+  否則解碼 Worker 會 404（core ≥ 0.2.2 會自動退回正確路徑並在 console 警告，≤ 0.2.1 則直接報 `decoder-crashed`）。
+  改完要 `npx vite --force` 清快取。**production build 不受影響**。
 - **`:wasm-url` 在 Vite 專案請一定要傳**（用上面的 `?url` 匯入）。Vite 打包 production 時不會替依賴套件內的 wasm 產生資源，不傳的話會退回外網 CDN，內網部署失敗；console 會有 `[scanner] ... fell back to CDN` 警告。
 - **一定要有一個按鈕呼叫 `start()`**：iOS 要求相機由使用者手勢觸發，不能自動開。
 - 元件本身沒有任何文字，所有文案由 slot 提供（方便 i18n）。
@@ -118,7 +121,7 @@ const { state, lastResult, error, start, stop, toggleTorch, capabilities } = use
 | `camera-in-use` | 被其他 App 佔用 | 請關閉其他使用相機的 App |
 | `insecure-context` | 不是 HTTPS | 需以 HTTPS 開啟 |
 | `camera-failed` / `track-ended` | 相機異常 | 相機異常，請重試 |
-| `decoder-init-failed` | wasm 載入失敗（多半是 `wasm-url` 沒設或路徑錯） | 掃描器載入失敗 |
+| `decoder-init-failed` | wasm 或 Worker 載入失敗（`wasm-url` 沒設 / 路徑錯 / Vite dev 沒加 `optimizeDeps.exclude`） | 掃描器載入失敗 |
 
 `error.recoverable === true` 時顯示「重試」按鈕即可。
 
@@ -136,7 +139,7 @@ const { state, lastResult, error, start, stop, toggleTorch, capabilities } = use
 | 現象 | 原因 |
 |---|---|
 | 按了開始沒反應、state 停在 `requesting-permission` | 瀏覽器正在問權限，或 iPad 上不是由手勢觸發 |
-| `decoder-init-failed` | 沒傳 `wasm-url`，core 去 CDN 抓 wasm 但內網沒外網 |
+| `decoder-init-failed` | 沒傳 `wasm-url`，core 去 CDN 抓 wasm 但內網沒外網；或 dev 模式 Worker 404（見上面的 `optimizeDeps.exclude`）。細節在 `error.cause` |
 | 掃得到 QR 掃不到條碼 | `formats` 沒包含一維格式 |
 | Data Matrix 有黃框但解不出 | 點陣式碼：需 core ≥ 0.1.3（自動前處理），且 `formats` 要含 `data_matrix` |
 | 兩個碼只回報一個 | 設計如此（單一模式）；要全部回報加 `:multi="true"` |

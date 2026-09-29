@@ -41,6 +41,14 @@ export interface WasmOptions {
    * 也可以 `import wasmUrl from '@cclemon/scanner-core/zxing_reader.wasm?url'` 後傳進來。
    */
   readonly wasmUrl?: string
+  /**
+   * 解碼 Worker（`wasm-worker.js`）的 URL。**通常不用設**：core 預設找與自己同目錄的檔案。
+   *
+   * 需要設的情況：bundler 沒把 Worker 當資源處理，或 Vite dev 把 core pre-bundle 了
+   * （正解是 `optimizeDeps.exclude`，見 docs/install.md）。Vite 專案可以
+   * `import workerUrl from '@cclemon/scanner-core/dist/wasm-worker.js?url'` 後傳進來。
+   */
+  readonly workerUrl?: string
   /** 自訂 Worker 的建立方式，給 bundler 處理不了 `new Worker(new URL(...))` 的情境。 */
   readonly createWorker?: () => Worker
 }

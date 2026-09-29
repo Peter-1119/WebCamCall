@@ -33,7 +33,31 @@ URL 依部署路徑填（掛在 `/rms/` 底下就是 `/rms/zxing_reader.wasm`）
 
 > 不設 `wasmUrl` 時會從 jsDelivr CDN 下載，**內網環境會失敗**（`decoder-init-failed`）。
 
-## 3. 使用
+## 3. Vite dev 模式：一定要加 optimizeDeps.exclude
+
+```js
+// vite.config.js
+export default defineConfig({
+  // Vite dev 會把 node_modules 的套件 pre-bundle 到 node_modules/.vite/deps/，
+  // 但不會把解碼 Worker（wasm-worker.js）一起複製過去 → Worker 404。排除這三個套件就好。
+  optimizeDeps: { exclude: ['@cclemon/scanner-core', '@cclemon/scanner-vue', '@cclemon/scanner-ui'] },
+})
+```
+
+改完要清快取才會生效：`npx vite --force`，或刪掉 `node_modules/.vite` 再 `npm run dev`。
+
+- **只影響 dev**。`vite build` 的產物不受影響（Rollup 會正確打包 Worker 到 `dist/assets/wasm-worker-*.js`）。
+- core **≥ 0.2.2** 遇到這個情況會自動改用套件真正的 dist 路徑，console 有
+  `[scanner] worker script not found at ...` 警告；還是建議照上面設定，少一次失敗往返。
+- core **≤ 0.2.1** 會直接報 `decoder-crashed`（誤導：Worker 不是掛掉，是根本沒載起來）。
+- 真的沒辦法改 `vite.config` 時，可以明確指定 Worker 位置：
+
+  ```js
+  import workerUrl from '@cclemon/scanner-core/dist/wasm-worker.js?url'
+  // <BarcodeScanner :wasm="{ wasmUrl, workerUrl }" />
+  ```
+
+## 4. 使用
 
 ```vue
 <script setup>
@@ -57,7 +81,7 @@ const onDecoded = (r) => console.log(r.text, r.format)
 - 只掃一維條碼：`:formats="LINEAR_FORMATS"`（從 `@cclemon/scanner-vue` import）。
 - 自己排版：用 `useBarcodeScanner()`，見 README。
 
-## 4. 部署要注意
+## 5. 部署要注意
 
 - **HTTPS**（相機的硬性條件）。
 - nginx 的 mime.types 要有 `application/wasm wasm;`（舊版沒有）。
@@ -66,7 +90,7 @@ const onDecoded = (r) => console.log(r.text, r.format)
 
 細節：`docs/deploy.md`。
 
-## 5. 升級
+## 6. 升級
 
 **要指名版本**。0.x 階段 `^0.1.4` 這種範圍不會跨 minor，`npm install` / `npm update` 都拿不到 0.2.0：
 

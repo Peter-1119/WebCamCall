@@ -4,8 +4,11 @@ import { createWasmDecoder } from './wasm'
 import type { WorkerLike } from './wasm'
 import type { RawResult, WorkerRequest, WorkerResponse } from './protocol'
 
-/** 假 Worker：記錄收到的訊息，讓測試決定何時回什麼。 */
-function fakeWorker(autoReady = true) {
+/**
+ * 假 Worker：記錄收到的訊息，讓測試決定何時回什麼。
+ * `mode`：`'ready'` 正常、`'silent'` 不自動回、`'load-error'` 模擬 Worker 檔載不起來（404 → onerror）。
+ */
+function fakeWorker(autoReady: boolean | 'load-error' = true) {
   const sent: Array<{ msg: WorkerRequest; transfer?: Transferable[] }> = []
   const w: WorkerLike & { reply: (r: WorkerResponse) => void; crash: (m: string) => void; sent: typeof sent } = {
     sent,
@@ -14,7 +17,9 @@ function fakeWorker(autoReady = true) {
     terminate: vi.fn(),
     postMessage(msg, transfer) {
       sent.push(transfer ? { msg, transfer } : { msg })
-      if (msg.type === 'init' && autoReady) queueMicrotask(() => w.reply({ type: 'ready' }))
+      if (msg.type !== 'init') return
+      if (autoReady === 'load-error') queueMicrotask(() => w.crash('Failed to load worker script'))
+      else if (autoReady) queueMicrotask(() => w.reply({ type: 'ready' }))
     },
     reply(r) {
       w.onmessage?.({ data: r } as MessageEvent<WorkerResponse>)
@@ -150,5 +155,45 @@ describe('wasm decoder', () => {
     await port.dispose()
     expect(w.terminate).toHaveBeenCalledTimes(1)
     expect(w.sent.at(-1)?.msg).toEqual({ type: 'dispose' })
+  })
+
+  it('a worker script that fails to load is decoder-init-failed (not decoder-crashed), and the message says how to fix it', async () => {
+    const w = fakeWorker('load-error')
+    await expect(createWasmDecoder({}, { createWorker: () => w, offscreenCanvas: true })).rejects.toMatchObject({
+      code: 'decoder-init-failed',
+      backend: 'wasm',
+    })
+    expect(w.terminate).toHaveBeenCalled()
+    // core 不輸出使用者文案：message 就是 code，診斷細節放在 cause
+    await expect(createWasmDecoder({}, { createWorker: () => fakeWorker('load-error'), offscreenCanvas: true })).rejects.toMatchObject({
+      cause: expect.stringContaining('optimizeDeps'),
+    })
+  })
+
+  it('falls back to the next worker candidate when the first one cannot be loaded', async () => {
+    const bad = fakeWorker('load-error')
+    const good = fakeWorker()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const port = await createWasmDecoder(
+      {},
+      {
+        createWorker: () => bad,
+        fallbackWorkers: [{ label: '/node_modules/@cclemon/scanner-core/dist/wasm-worker.js', create: () => good }],
+        offscreenCanvas: true,
+      },
+    )
+    expect(port.backend).toBe('wasm')
+    expect(bad.terminate).toHaveBeenCalled()
+    expect(good.sent[0]?.msg).toMatchObject({ type: 'init' })
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('worker script not found'))
+    warn.mockRestore()
+  })
+
+  it('a worker error AFTER init is still decoder-crashed', async () => {
+    const w = fakeWorker()
+    const port = await createWasmDecoder({}, { createWorker: () => w, offscreenCanvas: true })
+    const p = port.decode(frame(), { formats: ['qr_code'], multi: false, tryHarder: false })
+    w.crash('boom')
+    await expect(p).rejects.toMatchObject({ code: 'decoder-crashed', recoverable: true })
   })
 })
